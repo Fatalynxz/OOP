@@ -291,7 +291,7 @@ function POS({ cashier }: { cashier: string }) {
         addOns: c.addOns.map((a) => ({ name: a.name, price: a.price })),
         note: c.addOns.length ? c.addOns.map((a) => a.name).join(", ") : undefined,
       })),
-      total: cart.reduce((s, x) => s + (x.price + x.addOns.reduce((a, b) => a + b.price, 0)) * x.qty, 0),
+      total,
       priority: "normal",
       cashier,
       paymentMethod: "Cash",

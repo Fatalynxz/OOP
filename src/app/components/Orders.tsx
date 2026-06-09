@@ -19,6 +19,15 @@ import { orderStore, useOrders, type Order, type Status } from "../store";
 
 const TAX_RATE = 0.12;
 
+function getOrderSubtotal(order: Order) {
+  return order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+
+function getOrderTotalWithVat(order: Order) {
+  const subtotal = getOrderSubtotal(order);
+  return subtotal + subtotal * TAX_RATE;
+}
+
 const statusMeta: Record<Status, { label: string; color: string; icon: React.ReactNode }> = {
   pending: { label: "Pending", color: "bg-yellow-500/15 text-yellow-300", icon: <Clock className="w-3 h-3" /> },
   accepted: { label: "Accepted", color: "bg-blue-500/15 text-blue-300", icon: <CheckCircle2 className="w-3 h-3" /> },
@@ -58,11 +67,15 @@ export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" |
 
   const stats = useMemo(() => {
     const today = visibleOrders.filter((o) => o.status !== "voided");
-    const revenue = today.filter((o) => o.status !== "refunded").reduce((s, o) => s + o.total, 0);
+    const revenue = today
+      .filter((o) => o.status !== "refunded")
+      .reduce((sum, order) => sum + getOrderTotalWithVat(order), 0);
     const active = visibleOrders.filter((o) =>
       ["pending", "accepted", "preparing", "serving"].includes(o.status),
     ).length;
-    const refunded = visibleOrders.filter((o) => o.status === "refunded").reduce((s, o) => s + o.total, 0);
+    const refunded = visibleOrders
+      .filter((o) => o.status === "refunded")
+      .reduce((sum, order) => sum + getOrderTotalWithVat(order), 0);
     return { count: today.length, revenue, active, refunded };
   }, [visibleOrders]);
 
@@ -140,6 +153,7 @@ export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" |
             </thead>
             <tbody>
               {filtered.map((o) => {
+                const displayTotal = getOrderTotalWithVat(o);
                 const itemSummary =
                   o.items
                     .slice(0, 2)
@@ -161,7 +175,7 @@ export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" |
                         {statusMeta[o.status].icon} {statusMeta[o.status].label}
                       </span>
                     </Td>
-                    <Td className="text-right text-neutral-100">₱{o.total.toFixed(2)}</Td>
+                    <Td className="text-right text-neutral-100">₱{displayTotal.toFixed(2)}</Td>
                     <Td>
                       <div className="flex justify-end gap-1.5">
                         <button
