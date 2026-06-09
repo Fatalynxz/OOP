@@ -150,6 +150,7 @@ const listeners = new Set<() => void>();
 let hydrated = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 const advancing = new Set<string>();
+let refreshInFlight: Promise<void> | null = null;
 
 function persist() {
   try {
@@ -173,6 +174,11 @@ async function hydrateFromApi() {
 
 async function refreshFromApi() {
   if (typeof window === "undefined") return;
+  if (refreshInFlight) {
+    await refreshInFlight;
+    return;
+  }
+  refreshInFlight = (async () => {
   try {
     const data = await api<{ orders: Order[] }>("/orders/");
     const nextOrders = data.orders.map((order) => {
@@ -190,13 +196,20 @@ async function refreshFromApi() {
   } catch {
     if (!hydrated) emit();
   }
+  })();
+  try {
+    await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
 function startPolling() {
   if (pollTimer || typeof window === "undefined") return;
   pollTimer = setInterval(() => {
+    if (document.visibilityState === "hidden") return;
     void refreshFromApi();
-  }, 2500);
+  }, 5000);
 }
 
 function stopPollingIfIdle() {

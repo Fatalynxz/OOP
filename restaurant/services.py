@@ -15,8 +15,6 @@ class AuthService:
     def login(self, username, password, role):
         staff = self.staff_repo.find_for_login(username=username, role=role)
         if staff and staff.password == password:
-            staff.last_login_label = "Now"
-            staff.save(update_fields=["last_login_label", "updated_at"])
             return staff
         return None
 

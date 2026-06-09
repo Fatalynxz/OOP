@@ -11,6 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+DB_CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "0"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -56,7 +57,7 @@ ASGI_APPLICATION = "backend.asgi.application"
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
+        conn_max_age=DB_CONN_MAX_AGE,
         conn_health_checks=True,
     )
 }
