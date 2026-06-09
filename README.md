@@ -42,3 +42,13 @@ npm run dev
 ```
 
 Set `VITE_API_BASE_URL` in `.env` if the Django API runs somewhere else.
+
+## One-click Windows run
+
+Double-click `run_system.bat`, or run:
+
+```powershell
+.\run_system.bat
+```
+
+It cleans generated caches, applies migrations, and starts Django plus Vite.
