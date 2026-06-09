@@ -103,15 +103,7 @@ const roleLabels: Record<Role, string> = {
 const SESSION_KEY = "grabeat.session.v1";
 
 export default function App() {
-  const [session, setSession] = useState<{ role: Role; name: string } | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      return raw ? (JSON.parse(raw) as { role: Role; name: string }) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [session, setSession] = useState<{ role: Role; name: string } | null>(null);
   const [activeNav, setActiveNav] = useState<NavId>("pos");
   const [publicView, setPublicView] = useState<"login" | "track">("login");
 
@@ -126,7 +118,7 @@ export default function App() {
           const next = { role, name };
           setSession(next);
           try {
-            localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+            localStorage.removeItem(SESSION_KEY);
           } catch {
             /* ignore */
           }
