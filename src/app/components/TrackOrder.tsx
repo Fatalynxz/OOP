@@ -6,13 +6,22 @@ import { ArrowLeft, Tv2 } from "lucide-react";
 
 const GROUPS = [
   {
-    statuses: ["pending", "accepted"] as string[],
+    statuses: ["pending"] as string[],
     label: "Order Received",
     sub: "Being processed",
     dot: "bg-yellow-400",
     numColor: "text-yellow-300",
     badge: "bg-yellow-500/15 border-yellow-500/30 text-yellow-300",
     glow: "shadow-[0_0_30px_rgba(234,179,8,0.08)]",
+  },
+  {
+    statuses: ["accepted"] as string[],
+    label: "Accepted",
+    sub: "Queued by the kitchen",
+    dot: "bg-blue-400",
+    numColor: "text-blue-300",
+    badge: "bg-blue-500/15 border-blue-500/30 text-blue-300",
+    glow: "shadow-[0_0_30px_rgba(59,130,246,0.10)]",
   },
   {
     statuses: ["preparing"] as string[],
@@ -87,8 +96,8 @@ export function TrackOrder({ onBack }: { onBack: () => void }) {
 
       {/* Board */}
       <div className="flex-1 overflow-hidden p-4 md:p-6 flex flex-col gap-4">
-        {/* 3 status columns */}
-        <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
+        {/* 4 status columns */}
+        <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
           {GROUPS.map((group) => {
             const groupOrders = active.filter((o) =>
               group.statuses.includes(o.status)
