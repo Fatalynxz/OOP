@@ -20,8 +20,8 @@ export function Login({
   onLogin: (role: Role, name: string) => void;
   onTrack?: () => void;
 }) {
-  const [username, setUsername] = useState("cashier");
-  const [password, setPassword] = useState("grabeat123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -105,10 +105,7 @@ export function Login({
             </div>
 
             <div className="flex items-center justify-between text-xs text-neutral-500 mb-4">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked className="accent-red-600" />
-                Keep me signed in
-              </label>
+              <span />
               <a className="text-red-500 hover:text-red-400 cursor-pointer">
                 Forgot password?
               </a>
