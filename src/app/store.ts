@@ -148,6 +148,7 @@ function load(): { orders: Order[]; counter: number } {
 let { orders, counter } = load();
 const listeners = new Set<() => void>();
 let hydrated = false;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 function persist() {
   try {
@@ -166,18 +167,37 @@ function emit() {
 async function hydrateFromApi() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
+  await refreshFromApi();
+}
+
+async function refreshFromApi() {
+  if (typeof window === "undefined") return;
   try {
     const data = await api<{ orders: Order[] }>("/orders/");
+    const changed = JSON.stringify(orders) !== JSON.stringify(data.orders);
     orders = data.orders;
     const maxNo = orders
       .map((o) => parseInt(o.id.replace("ORD-", ""), 10))
       .filter(Number.isFinite)
       .reduce((max, n) => Math.max(max, n), 1042);
     counter = maxNo + 1;
-    emit();
+    if (changed) emit();
   } catch {
-    emit();
+    if (!hydrated) emit();
   }
+}
+
+function startPolling() {
+  if (pollTimer || typeof window === "undefined") return;
+  pollTimer = setInterval(() => {
+    void refreshFromApi();
+  }, 2500);
+}
+
+function stopPollingIfIdle() {
+  if (listeners.size > 0 || !pollTimer) return;
+  clearInterval(pollTimer);
+  pollTimer = null;
 }
 
 const ACTIVE_FLOW: Status[] = ["pending", "accepted", "preparing", "serving", "completed"];
@@ -186,7 +206,11 @@ export const orderStore = {
   subscribe(fn: () => void) {
     listeners.add(fn);
     void hydrateFromApi();
-    return () => listeners.delete(fn);
+    startPolling();
+    return () => {
+      listeners.delete(fn);
+      stopPollingIfIdle();
+    };
   },
   get() {
     return orders;
@@ -228,6 +252,7 @@ export const orderStore = {
       .then((data) => {
         orders = orders.map((x) => (x.id === id ? data.order : x));
         emit();
+        void refreshFromApi();
       })
       .catch(() => {});
   },
