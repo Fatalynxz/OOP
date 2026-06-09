@@ -31,16 +31,17 @@ const statusMeta: Record<Status, { label: string; color: string; icon: React.Rea
 
 type FilterTab = "all" | "active" | "completed" | "voided";
 
-export function Orders() {
+export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" | "kitchen"; name: string }) {
   const orders = useOrders();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<FilterTab>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ id: string; action: "void" | "refund" } | null>(null);
   const [reason, setReason] = useState("");
+  const visibleOrders = role === "cashier" ? orders.filter((o) => o.cashier === name) : orders;
 
   const filtered = useMemo(() => {
-    return orders.filter((o) => {
+    return visibleOrders.filter((o) => {
       const matchQ =
         q === "" ||
         o.id.toLowerCase().includes(q.toLowerCase()) ||
@@ -53,19 +54,19 @@ export function Orders() {
         (tab === "voided" && (o.status === "voided" || o.status === "refunded"));
       return matchQ && matchTab;
     });
-  }, [orders, q, tab]);
+  }, [visibleOrders, q, tab]);
 
   const stats = useMemo(() => {
-    const today = orders.filter((o) => o.status !== "voided");
+    const today = visibleOrders.filter((o) => o.status !== "voided");
     const revenue = today.filter((o) => o.status !== "refunded").reduce((s, o) => s + o.total, 0);
-    const active = orders.filter((o) =>
+    const active = visibleOrders.filter((o) =>
       ["pending", "accepted", "preparing", "serving"].includes(o.status),
     ).length;
-    const refunded = orders.filter((o) => o.status === "refunded").reduce((s, o) => s + o.total, 0);
+    const refunded = visibleOrders.filter((o) => o.status === "refunded").reduce((s, o) => s + o.total, 0);
     return { count: today.length, revenue, active, refunded };
-  }, [orders]);
+  }, [visibleOrders]);
 
-  const selected = openId ? orders.find((o) => o.id === openId) ?? null : null;
+  const selected = openId ? visibleOrders.find((o) => o.id === openId) ?? null : null;
 
   const commitAction = () => {
     if (!confirm) return;
@@ -81,10 +82,12 @@ export function Orders() {
         <div>
           <h2 className="text-neutral-100">Orders</h2>
           <div className="text-xs text-neutral-500">
-            History · receipts · void & refund · synced with kitchen
+            {role === "cashier"
+              ? "Your sales history · receipts · synced with kitchen"
+              : "History · receipts · void & refund · synced with kitchen"}
           </div>
         </div>
-        <div className="text-xs text-neutral-500">Auto-saved to this device</div>
+        <div className="text-xs text-neutral-500">{role === "cashier" ? name : "All cashiers"}</div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 px-6 pt-5">

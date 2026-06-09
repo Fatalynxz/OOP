@@ -229,7 +229,7 @@ export default function App() {
           {activeNav === "inventory" && <Inventory />}
           {activeNav === "reports" && <Reports />}
           {activeNav === "users" && <UsersModule />}
-          {activeNav === "orders" && <Orders />}
+          {activeNav === "orders" && <Orders role={session.role} name={session.name} />}
           {activeNav === "settings" && <SettingsPage />}
         </main>
       </div>
