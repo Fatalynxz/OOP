@@ -149,6 +149,7 @@ let { orders, counter } = load();
 const listeners = new Set<() => void>();
 let hydrated = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+const advancing = new Set<string>();
 
 function persist() {
   try {
@@ -241,6 +242,8 @@ export const orderStore = {
     return id;
   },
   advance(id: string) {
+    if (advancing.has(id)) return;
+    advancing.add(id);
     orders = orders.map((x) => {
       if (x.id !== id) return x;
       if (!ACTIVE_FLOW.includes(x.status)) return x;
@@ -254,7 +257,10 @@ export const orderStore = {
         emit();
         void refreshFromApi();
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        advancing.delete(id);
+      });
   },
   voidOrder(id: string, reason: string) {
     orders = orders.map((x) => (x.id === id ? { ...x, status: "voided", voidReason: reason } : x));

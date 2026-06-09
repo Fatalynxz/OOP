@@ -26,7 +26,7 @@ const columns: Col[] = [
   {
     id: "new",
     statuses: ["pending"],
-    label: "Order Accepted",
+    label: "New Orders",
     sub: "New incoming orders",
     icon: <AlertCircle className="w-4 h-4" />,
     tint: "text-yellow-400",
@@ -36,7 +36,7 @@ const columns: Col[] = [
   {
     id: "accepted",
     statuses: ["accepted"],
-    label: "Preparing",
+    label: "Accepted",
     sub: "Kitchen is cooking",
     icon: <ChefHat className="w-4 h-4" />,
     tint: "text-blue-400",
@@ -46,7 +46,7 @@ const columns: Col[] = [
   {
     id: "preparing",
     statuses: ["preparing"],
-    label: "Now Serving",
+    label: "Preparing",
     sub: "Currently being made",
     icon: <Flame className="w-4 h-4" />,
     tint: "text-orange-400",
