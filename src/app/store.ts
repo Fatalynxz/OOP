@@ -23,6 +23,7 @@ export type Order = {
 
 const STORAGE_KEY = "grabeat.orders.v1";
 const COUNTER_KEY = "grabeat.counter.v1";
+const ORDER_CHANNEL = "grabeat.orders.channel";
 
 function makeSeed(): Order[] {
   return [
@@ -149,13 +150,31 @@ let { orders, counter } = load();
 const listeners = new Set<() => void>();
 let hydrated = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollCleanup: (() => void) | null = null;
 const advancing = new Set<string>();
 let refreshInFlight: Promise<void> | null = null;
+let broadcastChannel: BroadcastChannel | null = null;
+
+function getBroadcastChannel() {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return null;
+  if (!broadcastChannel) {
+    broadcastChannel = new BroadcastChannel(ORDER_CHANNEL);
+    broadcastChannel.onmessage = () => {
+      void refreshFromApi();
+    };
+  }
+  return broadcastChannel;
+}
+
+function notifyOrderChange() {
+  getBroadcastChannel()?.postMessage({ type: "orders-updated" });
+}
 
 function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
     localStorage.setItem(COUNTER_KEY, String(counter));
+    localStorage.setItem(`${STORAGE_KEY}.updatedAt`, String(Date.now()));
   } catch {
     /* ignore quota errors */
   }
@@ -206,14 +225,37 @@ async function refreshFromApi() {
 
 function startPolling() {
   if (pollTimer || typeof window === "undefined") return;
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      void refreshFromApi();
+    }
+  };
+  const onFocus = () => {
+    void refreshFromApi();
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === `${STORAGE_KEY}.updatedAt`) {
+      void refreshFromApi();
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", onFocus);
+  window.addEventListener("storage", onStorage);
+  pollCleanup = () => {
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("focus", onFocus);
+    window.removeEventListener("storage", onStorage);
+  };
   pollTimer = setInterval(() => {
     if (document.visibilityState === "hidden") return;
     void refreshFromApi();
-  }, 5000);
+  }, 1000);
 }
 
 function stopPollingIfIdle() {
   if (listeners.size > 0 || !pollTimer) return;
+  pollCleanup?.();
+  pollCleanup = null;
   clearInterval(pollTimer);
   pollTimer = null;
 }
@@ -253,6 +295,7 @@ export const orderStore = {
     }).then((data) => {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
+      notifyOrderChange();
     }).catch(() => {
       /* keep optimistic local order */
     });
@@ -272,6 +315,7 @@ export const orderStore = {
       .then((data) => {
         orders = orders.map((x) => (x.id === id ? data.order : x));
         emit();
+        notifyOrderChange();
         void refreshFromApi();
       })
       .catch(() => {})
@@ -288,6 +332,7 @@ export const orderStore = {
     }).then((data) => {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
+      notifyOrderChange();
     }).catch(() => {});
   },
   refund(id: string, reason: string) {
@@ -299,12 +344,14 @@ export const orderStore = {
     }).then((data) => {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
+      notifyOrderChange();
     }).catch(() => {});
   },
   reset() {
     orders = makeSeed();
     counter = 1043;
     emit();
+    notifyOrderChange();
     void api("/orders/reset/", { method: "POST" }).catch(() => {});
   },
 };
