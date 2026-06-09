@@ -175,8 +175,12 @@ async function refreshFromApi() {
   if (typeof window === "undefined") return;
   try {
     const data = await api<{ orders: Order[] }>("/orders/");
-    const changed = JSON.stringify(orders) !== JSON.stringify(data.orders);
-    orders = data.orders;
+    const nextOrders = data.orders.map((order) => {
+      if (!advancing.has(order.id)) return order;
+      return orders.find((current) => current.id === order.id) ?? order;
+    });
+    const changed = JSON.stringify(orders) !== JSON.stringify(nextOrders);
+    orders = nextOrders;
     const maxNo = orders
       .map((o) => parseInt(o.id.replace("ORD-", ""), 10))
       .filter(Number.isFinite)
