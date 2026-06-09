@@ -13,7 +13,11 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import { DollarSign, ShoppingBag, Users as UsersIcon, TrendingUp, Download } from "lucide-react";
+import { ShoppingBag, Users as UsersIcon, TrendingUp, Download } from "lucide-react";
+
+function PesoIcon({ className = "" }: { className?: string }) {
+  return <span className={`inline-block font-semibold leading-none ${className}`}>₱</span>;
+}
 
 const hourly = [
   { h: "9am", sales: 1200, orders: 8 },
@@ -63,7 +67,7 @@ export function Reports() {
       </div>
 
       <div className="grid grid-cols-4 gap-4 px-6 pt-5">
-        <KPI icon={<DollarSign className="w-4 h-4" />} label="Gross Sales" value={`₱${totalSales.toLocaleString()}`} delta="+12.4%" />
+        <KPI icon={<PesoIcon className="w-4 h-4" />} label="Gross Sales" value={`₱${totalSales.toLocaleString()}`} delta="+12.4%" />
         <KPI icon={<ShoppingBag className="w-4 h-4" />} label="Orders" value={totalOrders.toString()} delta="+8.1%" />
         <KPI icon={<UsersIcon className="w-4 h-4" />} label="Avg. Ticket" value={`₱${avgTicket.toFixed(0)}`} delta="+3.7%" />
         <KPI icon={<TrendingUp className="w-4 h-4" />} label="Peak Hour" value="7pm" delta="44 orders" neutral />

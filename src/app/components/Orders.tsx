@@ -9,7 +9,6 @@ import {
   X,
   ChefHat,
   ShoppingBag,
-  DollarSign,
   CheckCircle2,
   Clock,
   Bell,
@@ -18,6 +17,10 @@ import {
 import { orderStore, useOrders, type Order, type Status } from "../store";
 
 const TAX_RATE = 0.12;
+
+function PesoIcon({ className = "" }: { className?: string }) {
+  return <span className={`inline-block font-semibold leading-none ${className}`}>₱</span>;
+}
 
 function getOrderSubtotal(order: Order) {
   return order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -105,7 +108,7 @@ export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" |
 
       <div className="grid grid-cols-4 gap-4 px-6 pt-5">
         <Stat icon={<ShoppingBag className="w-4 h-4" />} label="Orders Today" value={stats.count.toString()} tint="text-neutral-100" />
-        <Stat icon={<DollarSign className="w-4 h-4" />} label="Net Revenue" value={`₱${stats.revenue.toLocaleString()}`} tint="text-green-400" />
+        <Stat icon={<PesoIcon className="w-4 h-4" />} label="Net Revenue" value={`₱${stats.revenue.toLocaleString()}`} tint="text-green-400" />
         <Stat icon={<Clock className="w-4 h-4" />} label="In Service" value={stats.active.toString()} tint="text-red-500" />
         <Stat icon={<RotateCcw className="w-4 h-4" />} label="Refunded" value={`₱${stats.refunded.toLocaleString()}`} tint="text-red-400" />
       </div>
