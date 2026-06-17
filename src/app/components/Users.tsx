@@ -23,6 +23,26 @@ const roleMeta: Record<Role, { label: string; icon: React.ReactNode; color: stri
   kitchen: { label: "Kitchen", icon: <Flame className="w-3.5 h-3.5" />, color: "bg-red-500/15 text-red-300" },
 };
 
+const staffCodePrefix: Record<Role, string> = {
+  admin: "ADM",
+  cashier: "CSH",
+  kitchen: "KTC",
+};
+
+function staffNumber(staff: Staff) {
+  const fromId = parseInt(staff.id.replace(/\D/g, ""), 10);
+  return staff.dbId ?? (Number.isFinite(fromId) ? fromId : 0);
+}
+
+function makeStaffCode(staff: Staff, allStaff: Staff[]) {
+  const roleStaff = allStaff
+    .filter((s) => s.role === staff.role)
+    .sort((a, b) => staffNumber(a) - staffNumber(b));
+  const index = roleStaff.findIndex((s) => s.id === staff.id);
+  const number = String(index >= 0 ? index + 1 : 1).padStart(3, "0");
+  return `${staffCodePrefix[staff.role]}-${number}`;
+}
+
 const seed: Staff[] = [
   { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", shift: "Morning", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
   { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", shift: "Morning", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
@@ -345,20 +365,20 @@ export function Users() {
       )}
 
       {viewing && (
-        <StaffDetails staff={viewing} onClose={() => setViewing(null)} />
+        <StaffDetails staff={viewing} staffCode={makeStaffCode(viewing, staff)} onClose={() => setViewing(null)} />
       )}
     </div>
   );
 }
 
-function StaffDetails({ staff, onClose }: { staff: Staff; onClose: () => void }) {
+function StaffDetails({ staff, staffCode, onClose }: { staff: Staff; staffCode: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <div className="text-neutral-100">Staff Details</div>
-            <div className="text-xs text-neutral-500">{staff.id}</div>
+            <div className="text-xs text-neutral-500">{staffCode}</div>
           </div>
           <button
             onClick={onClose}
@@ -385,11 +405,10 @@ function StaffDetails({ staff, onClose }: { staff: Staff; onClose: () => void })
         </div>
 
         <div className="space-y-2 text-sm">
+          <DetailRow label="Staff code" value={staffCode} />
           <DetailRow label="Email" value={staff.email} />
           <DetailRow label="Phone" value={staff.phone} />
-          <DetailRow label="Shift" value={staff.shift} />
           <DetailRow label="Status" value={staff.status} />
-          <DetailRow label="Last login" value={staff.lastLogin} />
         </div>
       </div>
     </div>
