@@ -127,12 +127,6 @@ export function Users() {
     }
   };
 
-  const toggleStatus = (id: string) => {
-    const target = staff.find((s) => s.id === id);
-    if (!target) return;
-    updateStatus(id, target.status === "active" ? "inactive" : "active");
-  };
-
   return (
     <div className="flex-1 flex flex-col min-w-0">
       <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
@@ -267,15 +261,6 @@ export function Users() {
                             className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
                           >
                             View details
-                          </button>
-                          <button
-                            onClick={() => {
-                              toggleStatus(s.id);
-                              setOpenActions(null);
-                            }}
-                            className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
-                          >
-                            Change status
                           </button>
                         </div>
                       )}
