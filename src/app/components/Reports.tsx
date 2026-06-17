@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -19,17 +20,87 @@ import { useOrders, type Order } from "../store";
 const PESO = "\u20b1";
 const CHANNEL_COLORS = ["#f97316", "#fb923c", "#fdba74"];
 
+type RangeKey = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
+
+const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
+  { key: "daily", label: "Daily" },
+  { key: "weekly", label: "Weekly" },
+  { key: "monthly", label: "Monthly" },
+  { key: "quarterly", label: "Quarterly" },
+  { key: "yearly", label: "Yearly" },
+];
+
 function PesoIcon({ className = "" }: { className?: string }) {
   return <span className={`inline-block font-semibold leading-none ${className}`}>{PESO}</span>;
 }
 
-function isSameLocalDay(timestamp: number, date = new Date()) {
-  const orderDate = new Date(timestamp);
-  return (
-    orderDate.getFullYear() === date.getFullYear() &&
-    orderDate.getMonth() === date.getMonth() &&
-    orderDate.getDate() === date.getDate()
-  );
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+function addMonths(date: Date, months: number) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function startOfWeek(date: Date) {
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDays(startOfDay(date), diff);
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function startOfQuarter(date: Date) {
+  return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
+}
+
+function startOfYear(date: Date) {
+  return new Date(date.getFullYear(), 0, 1);
+}
+
+function shortDate(date: Date) {
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getRange(range: RangeKey, now = new Date()) {
+  if (range === "daily") {
+    const start = startOfDay(now);
+    return {
+      start,
+      end: addDays(start, 1),
+      label: now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+    };
+  }
+
+  if (range === "weekly") {
+    const start = startOfWeek(now);
+    const end = addDays(start, 7);
+    return { start, end, label: `${shortDate(start)} - ${shortDate(addDays(end, -1))}` };
+  }
+
+  if (range === "monthly") {
+    const start = startOfMonth(now);
+    return { start, end: addMonths(start, 1), label: start.toLocaleDateString(undefined, { month: "long", year: "numeric" }) };
+  }
+
+  if (range === "quarterly") {
+    const start = startOfQuarter(now);
+    const quarter = Math.floor(start.getMonth() / 3) + 1;
+    return { start, end: addMonths(start, 3), label: `Q${quarter} ${start.getFullYear()}` };
+  }
+
+  const start = startOfYear(now);
+  return { start, end: new Date(start.getFullYear() + 1, 0, 1), label: String(start.getFullYear()) };
+}
+
+function isWithinRange(timestamp: number, start: Date, end: Date) {
+  return timestamp >= start.getTime() && timestamp < end.getTime();
 }
 
 function hourLabel(hour: number) {
@@ -48,21 +119,45 @@ function orderTotal(order: Order) {
     : order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
 }
 
-function buildHourlyRows(orders: Order[]) {
-  const rows = Array.from({ length: 12 }, (_, index) => {
-    const hour = index + 9;
-    return { h: hourLabel(hour), hour, sales: 0, orders: 0 };
-  });
+function totalOrders(rowOrders: Order[]) {
+  return {
+    sales: rowOrders.reduce((sum, order) => sum + orderTotal(order), 0),
+    orders: rowOrders.length,
+  };
+}
 
-  for (const order of orders) {
-    const hour = new Date(order.createdAt).getHours();
-    const row = rows.find((entry) => entry.hour === hour);
-    if (!row) continue;
-    row.sales += orderTotal(order);
-    row.orders += 1;
+function buildTrendRows(orders: Order[], range: RangeKey, start: Date, end: Date) {
+  if (range === "daily") {
+    return Array.from({ length: 12 }, (_, index) => {
+      const hour = index + 9;
+      const rowOrders = orders.filter((order) => new Date(order.createdAt).getHours() === hour);
+      return { h: hourLabel(hour), hour, ...totalOrders(rowOrders) };
+    });
   }
 
-  return rows;
+  if (range === "weekly") {
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = addDays(start, index);
+      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, day, addDays(day, 1)));
+      return { h: day.toLocaleDateString(undefined, { weekday: "short" }), ...totalOrders(rowOrders) };
+    });
+  }
+
+  if (range === "monthly") {
+    const days = Math.ceil((end.getTime() - start.getTime()) / 86_400_000);
+    return Array.from({ length: days }, (_, index) => {
+      const day = addDays(start, index);
+      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, day, addDays(day, 1)));
+      return { h: String(day.getDate()), ...totalOrders(rowOrders) };
+    });
+  }
+
+  const months = range === "quarterly" ? 3 : 12;
+  return Array.from({ length: months }, (_, index) => {
+    const month = addMonths(start, index);
+    const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, month, addMonths(month, 1)));
+    return { h: month.toLocaleDateString(undefined, { month: "short" }), ...totalOrders(rowOrders) };
+  });
 }
 
 function buildTopItems(orders: Order[]) {
@@ -92,91 +187,185 @@ function buildChannels(orders: Order[]) {
   }));
 }
 
-function reportDateLabel() {
-  return new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[char];
   });
 }
 
-function exportCsv(rows: Order[]) {
-  const headers = ["Order", "Time", "Type", "Table", "Status", "Cashier", "Payment", "Total", "Items"];
-  const lines = rows.map((order) => [
-    order.id,
-    order.placedAt,
-    order.type,
-    order.table,
-    order.status,
-    order.cashier ?? "",
-    order.paymentMethod ?? "",
-    orderTotal(order).toFixed(2),
-    order.items.map((item) => `${item.qty}x ${item.name}`).join("; "),
-  ]);
+function exportPdf({
+  rangeLabel,
+  orders,
+  totalSales,
+  totalOrderCount,
+  avgTicket,
+  topItems,
+  channels,
+}: {
+  rangeLabel: string;
+  orders: Order[];
+  totalSales: number;
+  totalOrderCount: number;
+  avgTicket: number;
+  topItems: { name: string; sold: number }[];
+  channels: { name: string; value: number }[];
+}) {
+  const orderRows = orders
+    .map((order) => `
+      <tr>
+        <td>${escapeHtml(order.id)}</td>
+        <td>${escapeHtml(order.placedAt)}</td>
+        <td>${escapeHtml(order.type)}</td>
+        <td>${escapeHtml(order.status)}</td>
+        <td>${escapeHtml(order.cashier ?? "")}</td>
+        <td>${formatMoney(orderTotal(order))}</td>
+      </tr>
+    `)
+    .join("");
+  const itemRows = topItems.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${item.sold}</td></tr>`).join("");
+  const channelRows = channels.map((channel) => `<tr><td>${escapeHtml(channel.name)}</td><td>${channel.value}</td></tr>`).join("");
+  const win = window.open("", "_blank", "width=960,height=720");
+  if (!win) return;
 
-  const csv = [headers, ...lines]
-    .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `grabeat-sales-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  win.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>GRAB-EAT Sales Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #171717; margin: 32px; }
+          h1 { margin: 0 0 4px; font-size: 24px; }
+          h2 { margin: 0 0 8px; font-size: 16px; }
+          button { background: #dc2626; color: white; border: 0; border-radius: 999px; padding: 10px 16px; float: right; }
+          .muted { color: #666; font-size: 12px; }
+          .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0; }
+          .kpi { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+          .label { color: #666; font-size: 11px; text-transform: uppercase; }
+          .value { font-size: 20px; margin-top: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+          th, td { text-align: left; border-bottom: 1px solid #e5e5e5; padding: 8px; }
+          th { background: #f5f5f5; }
+          .section { margin-top: 22px; page-break-inside: avoid; }
+          @media print { button { display: none; } body { margin: 20px; } }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()">Save as PDF</button>
+        <h1>GRAB-EAT Sales Report</h1>
+        <div class="muted">${escapeHtml(rangeLabel)} | Generated ${escapeHtml(new Date().toLocaleString())}</div>
+        <div class="grid">
+          <div class="kpi"><div class="label">Gross Sales</div><div class="value">${formatMoney(totalSales)}</div></div>
+          <div class="kpi"><div class="label">Orders</div><div class="value">${totalOrderCount}</div></div>
+          <div class="kpi"><div class="label">Avg. Ticket</div><div class="value">${formatMoney(avgTicket)}</div></div>
+        </div>
+        <div class="section">
+          <h2>Order Channels</h2>
+          <table><thead><tr><th>Channel</th><th>Orders</th></tr></thead><tbody>${channelRows || "<tr><td colspan='2'>No sales</td></tr>"}</tbody></table>
+        </div>
+        <div class="section">
+          <h2>Top Selling Items</h2>
+          <table><thead><tr><th>Item</th><th>Units Sold</th></tr></thead><tbody>${itemRows || "<tr><td colspan='2'>No items sold</td></tr>"}</tbody></table>
+        </div>
+        <div class="section">
+          <h2>Orders</h2>
+          <table>
+            <thead><tr><th>Order</th><th>Time</th><th>Type</th><th>Status</th><th>Cashier</th><th>Total</th></tr></thead>
+            <tbody>${orderRows || "<tr><td colspan='6'>No orders in this period</td></tr>"}</tbody>
+          </table>
+        </div>
+      </body>
+    </html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
 }
 
 export function Reports() {
+  const [range, setRange] = useState<RangeKey>("daily");
   const orders = useOrders();
-  const todaysOrders = orders.filter((order) => isSameLocalDay(order.createdAt));
-  const serviceOrders = todaysOrders.filter((order) => order.status !== "voided");
+  const rangeInfo = useMemo(() => getRange(range), [range]);
+  const rangeLabel = `${RANGE_OPTIONS.find((option) => option.key === range)?.label} | ${rangeInfo.label}`;
+  const reportOrders = orders.filter((order) => isWithinRange(order.createdAt, rangeInfo.start, rangeInfo.end));
+  const serviceOrders = reportOrders.filter((order) => order.status !== "voided");
   const salesOrders = serviceOrders.filter((order) => order.status !== "refunded");
-  const refundedOrders = todaysOrders.filter((order) => order.status === "refunded");
-  const voidedOrders = todaysOrders.filter((order) => order.status === "voided");
+  const refundedOrders = reportOrders.filter((order) => order.status === "refunded");
+  const voidedOrders = reportOrders.filter((order) => order.status === "voided");
 
-  const hourly = buildHourlyRows(salesOrders);
+  const trend = buildTrendRows(salesOrders, range, rangeInfo.start, rangeInfo.end);
   const topItems = buildTopItems(salesOrders);
   const channels = buildChannels(salesOrders);
   const totalSales = salesOrders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const totalOrders = serviceOrders.length;
+  const totalOrderCount = serviceOrders.length;
   const avgTicket = salesOrders.length ? totalSales / salesOrders.length : 0;
-  const peak = hourly.reduce((best, row) => (row.orders > best.orders ? row : best), hourly[0]);
+  const peak = trend.reduce((best, row) => (row.orders > best.orders ? row : best), trend[0]);
   const channelTotal = channels.reduce((sum, channel) => sum + channel.value, 0);
-  const voidRate = todaysOrders.length ? (voidedOrders.length / todaysOrders.length) * 100 : 0;
+  const voidRate = reportOrders.length ? (voidedOrders.length / reportOrders.length) * 100 : 0;
   const refundTotal = refundedOrders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const activeOrders = todaysOrders.filter((order) =>
+  const activeOrders = reportOrders.filter((order) =>
     ["pending", "accepted", "preparing", "serving"].includes(order.status),
   ).length;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-      <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between gap-4">
         <div>
           <h2 className="text-neutral-100">Reports</h2>
-          <div className="text-xs text-neutral-500">Today · {reportDateLabel()}</div>
+          <div className="text-xs text-neutral-500">{rangeLabel}</div>
         </div>
-        <button
-          onClick={() => exportCsv(todaysOrders)}
-          className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 rounded-full px-4 py-2 text-sm"
-        >
-          <Download className="w-4 h-4" /> Export CSV
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-neutral-800/70 rounded-full p-1 text-sm">
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                onClick={() => setRange(option.key)}
+                className={`px-3 py-1.5 rounded-full transition ${
+                  range === option.key ? "bg-red-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() =>
+              exportPdf({
+                rangeLabel,
+                orders: reportOrders,
+                totalSales,
+                totalOrderCount,
+                avgTicket,
+                topItems,
+                channels,
+              })
+            }
+            className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 rounded-full px-4 py-2 text-sm"
+          >
+            <Download className="w-4 h-4" /> Export PDF
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 px-6 pt-5">
-        <KPI icon={<PesoIcon className="w-4 h-4" />} label="Gross Sales" value={formatMoney(totalSales)} delta="Live sales" neutral />
-        <KPI icon={<ShoppingBag className="w-4 h-4" />} label="Orders" value={totalOrders.toString()} delta={`${activeOrders} active`} neutral />
+        <KPI icon={<PesoIcon className="w-4 h-4" />} label="Gross Sales" value={formatMoney(totalSales)} delta="Selected period" neutral />
+        <KPI icon={<ShoppingBag className="w-4 h-4" />} label="Orders" value={totalOrderCount.toString()} delta={`${activeOrders} active`} neutral />
         <KPI icon={<UsersIcon className="w-4 h-4" />} label="Avg. Ticket" value={formatMoney(avgTicket)} delta={`${salesOrders.length} paid orders`} neutral />
-        <KPI icon={<TrendingUp className="w-4 h-4" />} label="Peak Hour" value={peak.orders ? peak.h : "None"} delta={`${peak.orders} orders`} neutral />
+        <KPI icon={<TrendingUp className="w-4 h-4" />} label={range === "daily" ? "Peak Hour" : "Peak Period"} value={peak.orders ? peak.h : "None"} delta={`${peak.orders} orders`} neutral />
       </div>
 
       <div className="grid grid-cols-3 gap-4 p-6">
         <Card className="col-span-2">
-          <CardHeader title="Hourly Sales" subtitle="Revenue across the service day" />
+          <CardHeader title={range === "daily" ? "Hourly Sales" : "Sales Trend"} subtitle="Revenue across the selected period" />
           <div className="h-64">
             <ResponsiveContainer>
-              <LineChart data={hourly} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <LineChart data={trend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid stroke="#262626" strokeDasharray="3 3" />
                 <XAxis dataKey="h" stroke="#737373" fontSize={11} />
                 <YAxis stroke="#737373" fontSize={11} />
@@ -215,7 +404,7 @@ export function Reports() {
         </Card>
 
         <Card className="col-span-2">
-          <CardHeader title="Top Selling Items" subtitle="Units sold today" />
+          <CardHeader title="Top Selling Items" subtitle="Units sold in selected period" />
           <div className="h-64">
             {topItems.length > 0 ? (
               <ResponsiveContainer>
@@ -239,7 +428,7 @@ export function Reports() {
           <CardHeader title="Service KPIs" subtitle="Operational health from sales data" />
           <div className="space-y-3 mt-2">
             <KpiRow label="Active orders" value={activeOrders.toString()} pct={Math.min(activeOrders * 12, 100)} />
-            <KpiRow label="Completed orders" value={todaysOrders.filter((order) => order.status === "completed").length.toString()} pct={Math.min(totalOrders * 8, 100)} />
+            <KpiRow label="Completed orders" value={reportOrders.filter((order) => order.status === "completed").length.toString()} pct={Math.min(totalOrderCount * 8, 100)} />
             <KpiRow label="Refunded sales" value={formatMoney(refundTotal)} pct={Math.min(refundedOrders.length * 20, 100)} bad={refundedOrders.length > 0} />
             <KpiRow label="Void rate" value={`${voidRate.toFixed(1)}%`} pct={Math.min(voidRate, 100)} bad={voidRate > 0} />
           </div>
