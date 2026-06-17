@@ -171,9 +171,7 @@ export function Users() {
                 <Th>Staff</Th>
                 <Th>Contact</Th>
                 <Th>Role</Th>
-                <Th>Shift</Th>
                 <Th>Status</Th>
-                <Th>Last Login</Th>
                 <Th className="text-center">Actions</Th>
               </tr>
             </thead>
@@ -210,7 +208,6 @@ export function Users() {
                       {roleMeta[s.role].icon} {roleMeta[s.role].label}
                     </span>
                   </Td>
-                  <Td className="text-neutral-400">{s.shift}</Td>
                   <Td>
                     <button onClick={() => cycleStatus(s.id)}>
                       {s.status === "active" && (
@@ -230,7 +227,6 @@ export function Users() {
                       )}
                     </button>
                   </Td>
-                  <Td className="text-neutral-500 text-xs">{s.lastLogin}</Td>
                   <Td className="relative">
                     <div className="flex justify-center">
                       <button
@@ -268,7 +264,7 @@ export function Users() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center text-neutral-500 py-12 text-sm">
+                  <td colSpan={5} className="text-center text-neutral-500 py-12 text-sm">
                     No staff match.
                   </td>
                 </tr>
