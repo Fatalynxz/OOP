@@ -43,7 +43,7 @@ const statusMeta: Record<Status, { label: string; color: string; icon: React.Rea
 
 type FilterTab = "all" | "active" | "completed" | "voided";
 
-export function Orders({ role, name }: { role: "admin" | "manager" | "cashier" | "kitchen"; name: string }) {
+export function Orders({ role, name }: { role: "admin" | "cashier" | "kitchen"; name: string }) {
   const orders = useOrders();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<FilterTab>("all");

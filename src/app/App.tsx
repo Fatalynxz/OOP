@@ -85,17 +85,16 @@ const menu: MenuItem[] = [
 type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | "settings";
 
 const allNav: { id: NavId; label: string; icon: React.ComponentType<{ className?: string }>; roles: Role[] }[] = [
-  { id: "pos", label: "Order Counter", icon: LayoutGrid, roles: ["cashier", "admin", "manager"] },
-  { id: "orders", label: "Orders", icon: ClipboardList, roles: ["cashier", "admin", "manager"] },
-  { id: "kitchen", label: "Kitchen", icon: ChefHat, roles: ["kitchen", "admin", "manager"] },
-  { id: "inventory", label: "Inventory", icon: Boxes, roles: ["admin", "manager"] },
-  { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
+  { id: "pos", label: "Order Counter", icon: LayoutGrid, roles: ["cashier", "admin"] },
+  { id: "orders", label: "Orders", icon: ClipboardList, roles: ["cashier", "admin"] },
+  { id: "kitchen", label: "Kitchen", icon: ChefHat, roles: ["kitchen", "admin"] },
+  { id: "inventory", label: "Inventory", icon: Boxes, roles: ["admin"] },
+  { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
   { id: "users", label: "Users", icon: Users, roles: ["admin"] },
 ];
 
 const roleLabels: Record<Role, string> = {
-  admin: "Administrator",
-  manager: "Manager",
+  admin: "Admin / Manager",
   cashier: "Cashier",
   kitchen: "Kitchen Staff",
 };
@@ -107,7 +106,9 @@ export default function App() {
     if (typeof window === "undefined") return null;
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
-      return raw ? (JSON.parse(raw) as { role: Role; name: string }) : null;
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as { role: Role | "manager"; name: string };
+      return { ...saved, role: saved.role === "manager" ? "admin" : saved.role };
     } catch {
       return null;
     }
@@ -135,7 +136,6 @@ export default function App() {
             cashier: "pos",
             kitchen: "kitchen",
             admin: "pos",
-            manager: "inventory",
           };
           setActiveNav(defaults[role]);
         }}

@@ -12,7 +12,7 @@ class Command(BaseCommand):
         staff = [
             ("Maria Reyes", "cashier", "maria.reyes", "maria.reyes@grabeat.ph", "cashier"),
             ("Joel Mendoza", "kitchen", "joel.m", "joel.m@grabeat.ph", "kitchen"),
-            ("Ana Cruz", "manager", "ana.cruz", "ana.cruz@grabeat.ph", "manager"),
+            ("Ana Cruz", "manager", "ana.cruz", "ana.cruz@grabeat.ph", "admin"),
             ("Daniel Lim", "admin", "daniel.lim", "daniel.lim@grabeat.ph", "admin"),
             ("Liza Bautista", "cashier2", "liza.b", "liza.b@grabeat.ph", "cashier"),
         ]

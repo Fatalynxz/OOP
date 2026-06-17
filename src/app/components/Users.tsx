@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, ShieldCheck, Briefcase, Receipt, Flame, MoreVertical, Mail, Phone, X } from "lucide-react";
+import { Search, Plus, ShieldCheck, Receipt, Flame, MoreVertical, Mail, Phone, X } from "lucide-react";
 import { api } from "../api";
 
-type Role = "admin" | "manager" | "cashier" | "kitchen";
+type Role = "admin" | "cashier" | "kitchen";
 
 type Staff = {
   id: string;
@@ -18,8 +18,7 @@ type Staff = {
 };
 
 const roleMeta: Record<Role, { label: string; icon: React.ReactNode; color: string }> = {
-  admin: { label: "Admin", icon: <ShieldCheck className="w-3.5 h-3.5" />, color: "bg-purple-500/15 text-purple-300" },
-  manager: { label: "Manager", icon: <Briefcase className="w-3.5 h-3.5" />, color: "bg-blue-500/15 text-blue-300" },
+  admin: { label: "Admin / Manager", icon: <ShieldCheck className="w-3.5 h-3.5" />, color: "bg-purple-500/15 text-purple-300" },
   cashier: { label: "Cashier", icon: <Receipt className="w-3.5 h-3.5" />, color: "bg-red-600/15 text-red-400" },
   kitchen: { label: "Kitchen", icon: <Flame className="w-3.5 h-3.5" />, color: "bg-red-500/15 text-red-300" },
 };
@@ -27,7 +26,7 @@ const roleMeta: Record<Role, { label: string; icon: React.ReactNode; color: stri
 const seed: Staff[] = [
   { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", shift: "Morning", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
   { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", shift: "Morning", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
-  { id: "u3", name: "Ana Cruz", email: "ana.cruz@grabeat.ph", phone: "+63 920 556 7788", role: "manager", status: "active", shift: "Full day", lastLogin: "1 hr ago", avatarTint: "from-blue-400 to-blue-600" },
+  { id: "u3", name: "Ana Cruz", email: "ana.cruz@grabeat.ph", phone: "+63 920 556 7788", role: "admin", status: "active", shift: "Full day", lastLogin: "1 hr ago", avatarTint: "from-blue-400 to-blue-600" },
   { id: "u4", name: "Rico Tan", email: "rico.tan@grabeat.ph", phone: "+63 916 778 9911", role: "kitchen", status: "off", shift: "Evening", lastLogin: "Yesterday", avatarTint: "from-emerald-400 to-emerald-600" },
   { id: "u5", name: "Liza Bautista", email: "liza.b@grabeat.ph", phone: "+63 915 332 5544", role: "cashier", status: "active", shift: "Evening", lastLogin: "3 hr ago", avatarTint: "from-pink-400 to-pink-600" },
   { id: "u6", name: "Daniel Lim", email: "daniel.lim@grabeat.ph", phone: "+63 919 998 4422", role: "admin", status: "active", shift: "On-call", lastLogin: "Now", avatarTint: "from-purple-400 to-purple-600" },
@@ -60,9 +59,8 @@ export function Users() {
     return matchQ && matchRole;
   });
 
-  const counts = {
+  const counts: Record<Role, number> = {
     admin: staff.filter((s) => s.role === "admin").length,
-    manager: staff.filter((s) => s.role === "manager").length,
     cashier: staff.filter((s) => s.role === "cashier").length,
     kitchen: staff.filter((s) => s.role === "kitchen").length,
   };
@@ -149,7 +147,7 @@ export function Users() {
           />
         </div>
         <div className="flex bg-neutral-800/70 rounded-full p-1 text-sm">
-          {(["all", "admin", "manager", "cashier", "kitchen"] as const).map((r) => (
+          {(["all", "admin", "cashier", "kitchen"] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}

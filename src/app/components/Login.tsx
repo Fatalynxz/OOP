@@ -11,7 +11,12 @@ import { BRAND } from "./Brand";
 import logoImg from "../../imports/image-7.png";
 import { api } from "../api";
 
-export type Role = "admin" | "cashier" | "kitchen" | "manager";
+export type Role = "admin" | "cashier" | "kitchen";
+type ApiRole = Role | "manager";
+
+function normalizeRole(role: ApiRole): Role {
+  return role === "manager" ? "admin" : role;
+}
 
 export function Login({
   onLogin,
@@ -31,11 +36,11 @@ export function Login({
     setError("");
     setLoading(true);
     try {
-      const data = await api<{ user: { role: Role; name: string } }>("/auth/login/", {
+      const data = await api<{ user: { role: ApiRole; name: string } }>("/auth/login/", {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      onLogin(data.user.role, data.user.name);
+      onLogin(normalizeRole(data.user.role), data.user.name);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in.");
     } finally {

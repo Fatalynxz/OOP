@@ -8,6 +8,7 @@ def money(value):
 class StaffSerializer:
     @staticmethod
     def one(staff):
+        role = "admin" if staff.role == "manager" else staff.role
         return {
             "id": f"u{staff.id}",
             "dbId": staff.id,
@@ -15,7 +16,7 @@ class StaffSerializer:
             "username": staff.username,
             "email": staff.email,
             "phone": staff.phone,
-            "role": staff.role,
+            "role": role,
             "status": staff.status,
             "shift": staff.shift,
             "lastLogin": staff.last_login_label,
