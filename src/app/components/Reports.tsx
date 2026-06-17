@@ -49,8 +49,7 @@ function addMonths(date: Date, months: number) {
 
 function startOfWeek(date: Date) {
   const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addDays(startOfDay(date), diff);
+  return addDays(startOfDay(date), -day);
 }
 
 function startOfYear(date: Date) {
@@ -59,6 +58,11 @@ function startOfYear(date: Date) {
 
 function shortDate(date: Date) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function weekRangeLabel(start: Date, end: Date) {
+  const lastDay = addDays(end, -1);
+  return `${shortDate(start)} - ${shortDate(lastDay)}, ${lastDay.getFullYear()}`;
 }
 
 function getRange(range: RangeKey, now = new Date()) {
@@ -74,7 +78,7 @@ function getRange(range: RangeKey, now = new Date()) {
   if (range === "daily" || range === "weekly") {
     const start = startOfWeek(now);
     const end = addDays(start, 7);
-    return { start, end, label: `${shortDate(start)} - ${shortDate(addDays(end, -1))}` };
+    return { start, end, label: weekRangeLabel(start, end) };
   }
 
   if (range === "monthly" || range === "quarterly") {
