@@ -234,14 +234,18 @@ export function Users() {
                     <select
                       value={s.status}
                       onChange={(event) => updateStatus(s.id, event.target.value as Staff["status"])}
-                      className={`rounded-full border px-3 py-1.5 text-xs outline-none transition ${
+                      className={`rounded-full border px-3 py-1.5 text-xs outline-none transition cursor-pointer shadow-sm ${
                         s.status === "active"
-                          ? "border-green-500/30 bg-green-500/10 text-green-300"
-                          : "border-neutral-700 bg-neutral-800 text-neutral-400"
+                          ? "border-green-500/50 bg-green-950 text-green-100"
+                          : "border-neutral-600 bg-neutral-900 text-neutral-100"
                       }`}
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option className="bg-neutral-950 text-green-200" value="active">
+                        Active
+                      </option>
+                      <option className="bg-neutral-950 text-neutral-200" value="inactive">
+                        Inactive
+                      </option>
                     </select>
                   </Td>
                   <Td className="relative w-24 text-center">
