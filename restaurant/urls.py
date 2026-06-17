@@ -12,6 +12,7 @@ from .views import (
     ReportTodayView,
     StaffCycleStatusView,
     StaffListView,
+    StaffStatusView,
 )
 
 
@@ -26,5 +27,6 @@ urlpatterns = [
     path("inventory/<int:pk>/adjust/", InventoryAdjustView.as_view()),
     path("staff/", StaffListView.as_view()),
     path("staff/<int:pk>/cycle-status/", StaffCycleStatusView.as_view()),
+    path("staff/<int:pk>/status/", StaffStatusView.as_view()),
     path("reports/today/", ReportTodayView.as_view()),
 ]

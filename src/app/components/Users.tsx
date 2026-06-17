@@ -11,7 +11,7 @@ type Staff = {
   email: string;
   phone: string;
   role: Role;
-  status: "active" | "off" | "suspended";
+  status: "active" | "inactive";
   shift: string;
   lastLogin: string;
   avatarTint: string;
@@ -47,10 +47,10 @@ const seed: Staff[] = [
   { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", shift: "Morning", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
   { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", shift: "Morning", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
   { id: "u3", name: "Ana Cruz", email: "ana.cruz@grabeat.ph", phone: "+63 920 556 7788", role: "admin", status: "active", shift: "Full day", lastLogin: "1 hr ago", avatarTint: "from-blue-400 to-blue-600" },
-  { id: "u4", name: "Rico Tan", email: "rico.tan@grabeat.ph", phone: "+63 916 778 9911", role: "kitchen", status: "off", shift: "Evening", lastLogin: "Yesterday", avatarTint: "from-emerald-400 to-emerald-600" },
+  { id: "u4", name: "Rico Tan", email: "rico.tan@grabeat.ph", phone: "+63 916 778 9911", role: "kitchen", status: "inactive", shift: "Evening", lastLogin: "Yesterday", avatarTint: "from-emerald-400 to-emerald-600" },
   { id: "u5", name: "Liza Bautista", email: "liza.b@grabeat.ph", phone: "+63 915 332 5544", role: "cashier", status: "active", shift: "Evening", lastLogin: "3 hr ago", avatarTint: "from-pink-400 to-pink-600" },
   { id: "u6", name: "Daniel Lim", email: "daniel.lim@grabeat.ph", phone: "+63 919 998 4422", role: "admin", status: "active", shift: "On-call", lastLogin: "Now", avatarTint: "from-purple-400 to-purple-600" },
-  { id: "u7", name: "Karen Uy", email: "karen.uy@grabeat.ph", phone: "+63 921 224 5577", role: "cashier", status: "suspended", shift: "—", lastLogin: "5 days ago", avatarTint: "from-yellow-400 to-yellow-600" },
+  { id: "u7", name: "Karen Uy", email: "karen.uy@grabeat.ph", phone: "+63 921 224 5577", role: "cashier", status: "inactive", shift: "—", lastLogin: "5 days ago", avatarTint: "from-yellow-400 to-yellow-600" },
 ];
 
 export function Users() {
@@ -114,21 +114,23 @@ export function Users() {
     setShowAdd(false);
   };
 
-  const cycleStatus = (id: string) => {
+  const updateStatus = (id: string, status: Staff["status"]) => {
     const target = staff.find((s) => s.id === id);
-    setStaff((arr) =>
-      arr.map((s) => {
-        if (s.id !== id) return s;
-        const next: Staff["status"] =
-          s.status === "active" ? "off" : s.status === "off" ? "suspended" : "active";
-        return { ...s, status: next };
-      }),
-    );
+    setStaff((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
     if (target?.dbId) {
-      void api<{ staff: Staff }>(`/staff/${target.dbId}/cycle-status/`, { method: "POST" })
+      void api<{ staff: Staff }>(`/staff/${target.dbId}/status/`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      })
         .then((data) => setStaff((arr) => arr.map((s) => (s.id === id ? data.staff : s))))
         .catch(() => {});
     }
+  };
+
+  const toggleStatus = (id: string) => {
+    const target = staff.find((s) => s.id === id);
+    if (!target) return;
+    updateStatus(id, target.status === "active" ? "inactive" : "active");
   };
 
   return (
@@ -229,23 +231,18 @@ export function Users() {
                     </span>
                   </Td>
                   <Td>
-                    <button onClick={() => cycleStatus(s.id)}>
-                      {s.status === "active" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-green-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Active
-                        </span>
-                      )}
-                      {s.status === "off" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-500" /> Off-shift
-                        </span>
-                      )}
-                      {s.status === "suspended" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-red-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> Suspended
-                        </span>
-                      )}
-                    </button>
+                    <select
+                      value={s.status}
+                      onChange={(event) => updateStatus(s.id, event.target.value as Staff["status"])}
+                      className={`rounded-full border px-3 py-1.5 text-xs outline-none transition ${
+                        s.status === "active"
+                          ? "border-green-500/30 bg-green-500/10 text-green-300"
+                          : "border-neutral-700 bg-neutral-800 text-neutral-400"
+                      }`}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
                   </Td>
                   <Td className="relative w-24 text-center">
                     <div className="flex justify-center">
@@ -269,7 +266,7 @@ export function Users() {
                           </button>
                           <button
                             onClick={() => {
-                              cycleStatus(s.id);
+                              toggleStatus(s.id);
                               setOpenActions(null);
                             }}
                             className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"

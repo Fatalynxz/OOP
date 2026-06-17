@@ -13,6 +13,7 @@ class StaffSerializer:
     @staticmethod
     def one(staff):
         role = "admin" if staff.role == "manager" else staff.role
+        status = "active" if staff.status == "active" else "inactive"
         return {
             "id": f"u{staff.id}",
             "dbId": staff.id,
@@ -21,7 +22,7 @@ class StaffSerializer:
             "email": staff.email,
             "phone": staff.phone,
             "role": role,
-            "status": staff.status,
+            "status": status,
             "shift": staff.shift,
             "lastLogin": staff.last_login_label,
             "avatarTint": "from-red-500 to-red-700",

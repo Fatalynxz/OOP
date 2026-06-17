@@ -124,6 +124,16 @@ class StaffCycleStatusView(JsonView):
         return self.ok({"staff": StaffSerializer.one(staff)})
 
 
+class StaffStatusView(JsonView):
+    def post(self, request, pk):
+        self.request = request
+        try:
+            staff = StaffService().set_status(pk, self.payload().get("status"))
+        except ValueError as exc:
+            return self.error(str(exc), 400)
+        return self.ok({"staff": StaffSerializer.one(staff)})
+
+
 class ReportTodayView(JsonView):
     def get(self, request):
         return self.ok(ReportService().today())

@@ -115,6 +115,14 @@ class StaffService:
             password=payload.get("password", "grabeat123"),
         )
 
+    def set_status(self, pk, status):
+        if status not in ["active", "inactive"]:
+            raise ValueError("Status must be active or inactive.")
+        staff = StaffUser.objects.get(pk=pk)
+        staff.status = "active" if status == "active" else "off"
+        staff.save(update_fields=["status", "updated_at"])
+        return staff
+
 
 class ReportService:
     def today(self):
