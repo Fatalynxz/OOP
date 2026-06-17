@@ -96,8 +96,7 @@ class Order(TimestampedModel):
     ]
     TYPE_CHOICES = [
         ("Dine in", "Dine in"),
-        ("Take away", "Take away"),
-        ("Delivery", "Delivery"),
+        ("Take", "Take"),
     ]
     PAYMENT_CHOICES = [
         ("Cash", "Cash"),

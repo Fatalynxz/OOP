@@ -2,13 +2,14 @@ import { useSyncExternalStore } from "react";
 import { api } from "./api";
 
 export type Status = "pending" | "accepted" | "preparing" | "serving" | "completed" | "voided" | "refunded";
+export type OrderType = "Dine in" | "Take";
 
 export type OrderItem = { name: string; qty: number; price: number; note?: string; addOns?: { name: string; price: number }[] };
 
 export type Order = {
   id: string;
   table: string;
-  type: "Dine in" | "Take away" | "Delivery";
+  type: OrderType;
   placedAt: string;
   createdAt: number;
   items: OrderItem[];
@@ -24,6 +25,14 @@ export type Order = {
 const STORAGE_KEY = "grabeat.orders.v1";
 const COUNTER_KEY = "grabeat.counter.v1";
 const ORDER_CHANNEL = "grabeat.orders.channel";
+
+function normalizeOrderType(type: string): OrderType {
+  return type === "Dine in" ? "Dine in" : "Take";
+}
+
+function normalizeOrder(order: Order | (Omit<Order, "type"> & { type: string })): Order {
+  return { ...order, type: normalizeOrderType(order.type) };
+}
 
 function makeSeed(): Order[] {
   return [
@@ -46,7 +55,7 @@ function makeSeed(): Order[] {
     {
       id: "ORD-1041",
       table: "TAKE",
-      type: "Take away",
+      type: "Take",
       placedAt: "12:12",
       createdAt: Date.now() - 4 * 60_000,
       items: [
@@ -75,8 +84,8 @@ function makeSeed(): Order[] {
     },
     {
       id: "ORD-1039",
-      table: "DEL",
-      type: "Delivery",
+      table: "TAKE",
+      type: "Take",
       placedAt: "12:05",
       createdAt: Date.now() - 11 * 60_000,
       items: [
@@ -136,7 +145,7 @@ function load(): { orders: Order[]; counter: number } {
     const raw = localStorage.getItem(STORAGE_KEY);
     const counterRaw = localStorage.getItem(COUNTER_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Order[];
+      const parsed = (JSON.parse(raw) as (Order | (Omit<Order, "type"> & { type: string }))[]).map(normalizeOrder);
       const counter = counterRaw ? parseInt(counterRaw, 10) : 1043;
       return { orders: parsed, counter: Number.isFinite(counter) ? counter : 1043 };
     }
@@ -201,8 +210,9 @@ async function refreshFromApi() {
   try {
     const data = await api<{ orders: Order[] }>("/orders/");
     const nextOrders = data.orders.map((order) => {
-      if (!advancing.has(order.id)) return order;
-      return orders.find((current) => current.id === order.id) ?? order;
+      const normalized = normalizeOrder(order);
+      if (!advancing.has(order.id)) return normalized;
+      return orders.find((current) => current.id === order.id) ?? normalized;
     });
     const changed = JSON.stringify(orders) !== JSON.stringify(nextOrders);
     orders = nextOrders;

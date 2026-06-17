@@ -27,10 +27,13 @@ class OrderService:
 
     @transaction.atomic
     def create(self, payload):
+        order_type = payload.get("type") or "Take"
+        if order_type != "Dine in":
+            order_type = "Take"
         order = Order.objects.create(
             order_no=self.repo.next_number(),
             table=payload.get("table") or "TAKE",
-            order_type=payload.get("type") or "Take away",
+            order_type=order_type,
             priority=payload.get("priority") or "normal",
             cashier=payload.get("cashier") or "",
             payment_method=payload.get("paymentMethod") or "Cash",
@@ -121,11 +124,15 @@ class ReportService:
         count = orders.count()
         by_type = orders.values("order_type").annotate(value=Count("id")).order_by("order_type")
         top_items = OrderItem.objects.filter(order__created_at__gte=start).values("name").annotate(sold=Sum("quantity")).order_by("-sold")[:8]
+        channels = {}
+        for row in by_type:
+            label = "Dine in" if row["order_type"] == "Dine in" else "Take"
+            channels[label] = channels.get(label, 0) + row["value"]
         return {
             "date": start.date().isoformat(),
             "grossSales": float(gross),
             "orders": count,
             "avgTicket": float(gross / count) if count else 0,
-            "channels": [{"name": row["order_type"], "value": row["value"]} for row in by_type],
+            "channels": [{"name": name, "value": value} for name, value in channels.items()],
             "topItems": list(top_items),
         }

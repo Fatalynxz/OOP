@@ -5,6 +5,10 @@ def money(value):
     return float(value or Decimal("0.00"))
 
 
+def order_type_label(value):
+    return "Dine in" if value == "Dine in" else "Take"
+
+
 class StaffSerializer:
     @staticmethod
     def one(staff):
@@ -62,7 +66,7 @@ class OrderSerializer:
         return {
             "id": order.order_no,
             "table": order.table,
-            "type": order.order_type,
+            "type": order_type_label(order.order_type),
             "placedAt": order.placed_at_label,
             "createdAt": int(order.created_at.timestamp() * 1000),
             "items": [OrderSerializer.item(item) for item in order.items.all()],

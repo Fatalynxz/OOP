@@ -214,7 +214,7 @@ function buildChannels(orders: Order[]) {
     counts.set(order.type, (counts.get(order.type) ?? 0) + 1);
   }
 
-  return ["Dine in", "Take away", "Delivery"].map((name, index) => ({
+  return ["Dine in", "Take"].map((name, index) => ({
     name,
     value: counts.get(name) ?? 0,
     color: CHANNEL_COLORS[index],

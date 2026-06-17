@@ -274,7 +274,7 @@ function addOnsForItem(item: MenuItem) {
 
 function POS({ cashier }: { cashier: string }) {
   const [activeCategory, setActiveCategory] = useState("takoyaki");
-  const [orderType, setOrderType] = useState<"dinein" | "takeaway" | "delivery">("dinein");
+  const [orderType, setOrderType] = useState<"dinein" | "take">("dinein");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
@@ -282,10 +282,9 @@ function POS({ cashier }: { cashier: string }) {
 
   const sendToKitchen = () => {
     if (cart.length === 0) return;
-    const typeLabel =
-      orderType === "dinein" ? "Dine in" : orderType === "takeaway" ? "Take away" : "Delivery";
+    const typeLabel = orderType === "dinein" ? "Dine in" : "Take";
     const id = orderStore.add({
-      table: orderType === "dinein" ? `T-${Math.floor(Math.random() * 12) + 1}` : typeLabel === "Delivery" ? "DEL" : "TAKE",
+      table: orderType === "dinein" ? `T-${Math.floor(Math.random() * 12) + 1}` : "TAKE",
       type: typeLabel,
       items: cart.map((c) => ({
         name: c.name,
@@ -488,7 +487,7 @@ function POS({ cashier }: { cashier: string }) {
       <aside className="w-[340px] border-l border-neutral-800 bg-neutral-900/60 flex flex-col">
         <div className="p-5 border-b border-neutral-800">
           <div className="flex bg-neutral-800/70 rounded-full p-1 text-sm">
-            {(["takeaway", "dinein", "delivery"] as const).map((t) => (
+            {(["take", "dinein"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setOrderType(t)}
@@ -498,7 +497,7 @@ function POS({ cashier }: { cashier: string }) {
                     : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
-                {t === "dinein" ? "Dine in" : t === "takeaway" ? "Take away" : "Delivery"}
+                {t === "dinein" ? "Dine in" : "Take"}
               </button>
             ))}
           </div>
