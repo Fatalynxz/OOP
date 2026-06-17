@@ -20,9 +20,10 @@ import { useOrders, type Order } from "../store";
 const PESO = "\u20b1";
 const CHANNEL_COLORS = ["#f97316", "#fb923c", "#fdba74"];
 
-type RangeKey = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
+type RangeKey = "hourly" | "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 
 const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
+  { key: "hourly", label: "Hourly" },
   { key: "daily", label: "Daily" },
   { key: "weekly", label: "Weekly" },
   { key: "monthly", label: "Monthly" },
@@ -52,14 +53,6 @@ function startOfWeek(date: Date) {
   return addDays(startOfDay(date), diff);
 }
 
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function startOfQuarter(date: Date) {
-  return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
-}
-
 function startOfYear(date: Date) {
   return new Date(date.getFullYear(), 0, 1);
 }
@@ -69,7 +62,7 @@ function shortDate(date: Date) {
 }
 
 function getRange(range: RangeKey, now = new Date()) {
-  if (range === "daily") {
+  if (range === "hourly") {
     const start = startOfDay(now);
     return {
       start,
@@ -78,25 +71,19 @@ function getRange(range: RangeKey, now = new Date()) {
     };
   }
 
-  if (range === "weekly") {
+  if (range === "daily" || range === "weekly") {
     const start = startOfWeek(now);
     const end = addDays(start, 7);
     return { start, end, label: `${shortDate(start)} - ${shortDate(addDays(end, -1))}` };
   }
 
-  if (range === "monthly") {
-    const start = startOfMonth(now);
-    return { start, end: addMonths(start, 1), label: start.toLocaleDateString(undefined, { month: "long", year: "numeric" }) };
+  if (range === "monthly" || range === "quarterly") {
+    const start = startOfYear(now);
+    return { start, end: new Date(start.getFullYear() + 1, 0, 1), label: String(start.getFullYear()) };
   }
 
-  if (range === "quarterly") {
-    const start = startOfQuarter(now);
-    const quarter = Math.floor(start.getMonth() / 3) + 1;
-    return { start, end: addMonths(start, 3), label: `Q${quarter} ${start.getFullYear()}` };
-  }
-
-  const start = startOfYear(now);
-  return { start, end: new Date(start.getFullYear() + 1, 0, 1), label: String(start.getFullYear()) };
+  const start = new Date(now.getFullYear() - 1, 0, 1);
+  return { start, end: new Date(now.getFullYear() + 2, 0, 1), label: `${now.getFullYear() - 1} - ${now.getFullYear() + 1}` };
 }
 
 function isWithinRange(timestamp: number, start: Date, end: Date) {
@@ -127,7 +114,7 @@ function totalOrders(rowOrders: Order[]) {
 }
 
 function buildTrendRows(orders: Order[], range: RangeKey, start: Date, end: Date) {
-  if (range === "daily") {
+  if (range === "hourly") {
     return Array.from({ length: 12 }, (_, index) => {
       const hour = index + 9;
       const rowOrders = orders.filter((order) => new Date(order.createdAt).getHours() === hour);
@@ -135,28 +122,38 @@ function buildTrendRows(orders: Order[], range: RangeKey, start: Date, end: Date
     });
   }
 
-  if (range === "weekly") {
+  if (range === "daily" || range === "weekly") {
     return Array.from({ length: 7 }, (_, index) => {
       const day = addDays(start, index);
       const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, day, addDays(day, 1)));
-      return { h: day.toLocaleDateString(undefined, { weekday: "short" }), ...totalOrders(rowOrders) };
+      const label = range === "daily"
+        ? day.toLocaleDateString(undefined, { weekday: "short" })
+        : shortDate(day);
+      return { h: label, ...totalOrders(rowOrders) };
     });
   }
 
   if (range === "monthly") {
-    const days = Math.ceil((end.getTime() - start.getTime()) / 86_400_000);
-    return Array.from({ length: days }, (_, index) => {
-      const day = addDays(start, index);
-      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, day, addDays(day, 1)));
-      return { h: String(day.getDate()), ...totalOrders(rowOrders) };
+    return Array.from({ length: 12 }, (_, index) => {
+      const month = addMonths(start, index);
+      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, month, addMonths(month, 1)));
+      return { h: month.toLocaleDateString(undefined, { month: "short" }), ...totalOrders(rowOrders) };
     });
   }
 
-  const months = range === "quarterly" ? 3 : 12;
-  return Array.from({ length: months }, (_, index) => {
-    const month = addMonths(start, index);
-    const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, month, addMonths(month, 1)));
-    return { h: month.toLocaleDateString(undefined, { month: "short" }), ...totalOrders(rowOrders) };
+  if (range === "quarterly") {
+    return Array.from({ length: 4 }, (_, index) => {
+      const quarterStart = addMonths(start, index * 3);
+      const quarterEnd = addMonths(quarterStart, 3);
+      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, quarterStart, quarterEnd));
+      return { h: `Q${index + 1}`, ...totalOrders(rowOrders) };
+    });
+  }
+
+  return Array.from({ length: 3 }, (_, index) => {
+    const yearStart = new Date(start.getFullYear() + index, 0, 1);
+    const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, yearStart, new Date(yearStart.getFullYear() + 1, 0, 1)));
+    return { h: String(yearStart.getFullYear()), ...totalOrders(rowOrders) };
   });
 }
 
@@ -289,7 +286,7 @@ function exportPdf({
 }
 
 export function Reports() {
-  const [range, setRange] = useState<RangeKey>("daily");
+  const [range, setRange] = useState<RangeKey>("hourly");
   const orders = useOrders();
   const rangeInfo = useMemo(() => getRange(range), [range]);
   const rangeLabel = `${RANGE_OPTIONS.find((option) => option.key === range)?.label} | ${rangeInfo.label}`;
@@ -357,12 +354,12 @@ export function Reports() {
         <KPI icon={<PesoIcon className="w-4 h-4" />} label="Gross Sales" value={formatMoney(totalSales)} delta="Selected period" neutral />
         <KPI icon={<ShoppingBag className="w-4 h-4" />} label="Orders" value={totalOrderCount.toString()} delta={`${activeOrders} active`} neutral />
         <KPI icon={<UsersIcon className="w-4 h-4" />} label="Avg. Ticket" value={formatMoney(avgTicket)} delta={`${salesOrders.length} paid orders`} neutral />
-        <KPI icon={<TrendingUp className="w-4 h-4" />} label={range === "daily" ? "Peak Hour" : "Peak Period"} value={peak.orders ? peak.h : "None"} delta={`${peak.orders} orders`} neutral />
+        <KPI icon={<TrendingUp className="w-4 h-4" />} label={range === "hourly" ? "Peak Hour" : "Peak Period"} value={peak.orders ? peak.h : "None"} delta={`${peak.orders} orders`} neutral />
       </div>
 
       <div className="grid grid-cols-3 gap-4 p-6">
         <Card className="col-span-2">
-          <CardHeader title={range === "daily" ? "Hourly Sales" : "Sales Trend"} subtitle="Revenue across the selected period" />
+          <CardHeader title={range === "hourly" ? "Hourly Sales" : "Sales Trend"} subtitle="Revenue across the selected period" />
           <div className="h-64">
             <ResponsiveContainer>
               <LineChart data={trend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
