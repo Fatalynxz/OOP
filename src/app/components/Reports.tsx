@@ -56,6 +56,10 @@ function startOfYear(date: Date) {
   return new Date(date.getFullYear(), 0, 1);
 }
 
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
 function shortDate(date: Date) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
@@ -63,6 +67,16 @@ function shortDate(date: Date) {
 function weekRangeLabel(start: Date, end: Date) {
   const lastDay = addDays(end, -1);
   return `${shortDate(start)} - ${shortDate(lastDay)}, ${lastDay.getFullYear()}`;
+}
+
+function compactWeekRangeLabel(start: Date, end: Date) {
+  const lastDay = addDays(end, -1);
+  const startMonth = start.toLocaleDateString(undefined, { month: "short" });
+  const endMonth = lastDay.toLocaleDateString(undefined, { month: "short" });
+  if (start.getMonth() === lastDay.getMonth()) {
+    return `${startMonth} ${start.getDate()} - ${lastDay.getDate()}`;
+  }
+  return `${startMonth} ${start.getDate()} - ${endMonth} ${lastDay.getDate()}`;
 }
 
 function getRange(range: RangeKey, now = new Date()) {
@@ -75,10 +89,22 @@ function getRange(range: RangeKey, now = new Date()) {
     };
   }
 
-  if (range === "daily" || range === "weekly") {
+  if (range === "daily") {
     const start = startOfWeek(now);
     const end = addDays(start, 7);
     return { start, end, label: weekRangeLabel(start, end) };
+  }
+
+  if (range === "weekly") {
+    const monthStart = startOfMonth(now);
+    const lastDayOfMonth = addDays(addMonths(monthStart, 1), -1);
+    const start = startOfWeek(monthStart);
+    const end = addDays(startOfWeek(lastDayOfMonth), 7);
+    return {
+      start,
+      end,
+      label: monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+    };
   }
 
   if (range === "monthly" || range === "quarterly") {
@@ -126,14 +152,21 @@ function buildTrendRows(orders: Order[], range: RangeKey, start: Date, end: Date
     });
   }
 
-  if (range === "daily" || range === "weekly") {
+  if (range === "daily") {
     return Array.from({ length: 7 }, (_, index) => {
       const day = addDays(start, index);
       const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, day, addDays(day, 1)));
-      const label = range === "daily"
-        ? day.toLocaleDateString(undefined, { weekday: "short" })
-        : shortDate(day);
-      return { h: label, ...totalOrders(rowOrders) };
+      return { h: day.toLocaleDateString(undefined, { weekday: "short" }), ...totalOrders(rowOrders) };
+    });
+  }
+
+  if (range === "weekly") {
+    const weekCount = Math.ceil((end.getTime() - start.getTime()) / (7 * 86_400_000));
+    return Array.from({ length: weekCount }, (_, index) => {
+      const weekStart = addDays(start, index * 7);
+      const weekEnd = addDays(weekStart, 7);
+      const rowOrders = orders.filter((order) => isWithinRange(order.createdAt, weekStart, weekEnd));
+      return { h: compactWeekRangeLabel(weekStart, weekEnd), ...totalOrders(rowOrders) };
     });
   }
 
