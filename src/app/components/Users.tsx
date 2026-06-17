@@ -38,6 +38,8 @@ export function Users() {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
   const [showAdd, setShowAdd] = useState(false);
+  const [openActions, setOpenActions] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Staff | null>(null);
   const [draft, setDraft] = useState<{ name: string; email: string; role: Role }>({
     name: "",
     email: "",
@@ -172,7 +174,7 @@ export function Users() {
                 <Th>Shift</Th>
                 <Th>Status</Th>
                 <Th>Last Login</Th>
-                <Th className="text-right">Actions</Th>
+                <Th className="text-center">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -229,11 +231,37 @@ export function Users() {
                     </button>
                   </Td>
                   <Td className="text-neutral-500 text-xs">{s.lastLogin}</Td>
-                  <Td>
-                    <div className="flex justify-end">
-                      <button className="w-7 h-7 rounded-full hover:bg-neutral-800 flex items-center justify-center text-neutral-500">
+                  <Td className="relative">
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => setOpenActions((current) => (current === s.id ? null : s.id))}
+                        className="w-7 h-7 rounded-full hover:bg-neutral-800 flex items-center justify-center text-neutral-500"
+                        title="Staff actions"
+                      >
                         <MoreVertical className="w-4 h-4" />
                       </button>
+                      {openActions === s.id && (
+                        <div className="absolute right-4 top-9 z-20 w-36 rounded-xl border border-neutral-800 bg-neutral-950 shadow-xl overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setViewing(s);
+                              setOpenActions(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
+                          >
+                            View details
+                          </button>
+                          <button
+                            onClick={() => {
+                              cycleStatus(s.id);
+                              setOpenActions(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
+                          >
+                            Change status
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </Td>
                 </tr>
@@ -319,6 +347,64 @@ export function Users() {
           </div>
         </div>
       )}
+
+      {viewing && (
+        <StaffDetails staff={viewing} onClose={() => setViewing(null)} />
+      )}
+    </div>
+  );
+}
+
+function StaffDetails({ staff, onClose }: { staff: Staff; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="text-neutral-100">Staff Details</div>
+            <div className="text-xs text-neutral-500">{staff.id}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full hover:bg-neutral-800 flex items-center justify-center text-neutral-400"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 mb-5">
+          <div
+            className={`w-12 h-12 rounded-full bg-gradient-to-br ${staff.avatarTint} flex items-center justify-center text-white text-sm`}
+          >
+            {staff.name
+              .split(" ")
+              .map((p) => p[0])
+              .slice(0, 2)
+              .join("")}
+          </div>
+          <div>
+            <div className="text-neutral-100">{staff.name}</div>
+            <div className="text-xs text-neutral-500">{roleMeta[staff.role].label}</div>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <DetailRow label="Email" value={staff.email} />
+          <DetailRow label="Phone" value={staff.phone} />
+          <DetailRow label="Shift" value={staff.shift} />
+          <DetailRow label="Status" value={staff.status} />
+          <DetailRow label="Last login" value={staff.lastLogin} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-neutral-800/70 py-2">
+      <span className="text-neutral-500">{label}</span>
+      <span className="text-neutral-200 text-right">{value}</span>
     </div>
   );
 }
