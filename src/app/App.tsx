@@ -144,6 +144,7 @@ export default function App() {
   }
 
   const nav = allNav.filter((n) => n.roles.includes(session.role));
+  const canAccessSettings = session.role === "admin";
 
   return (
     <div className="size-full min-h-screen bg-neutral-950 flex">
@@ -172,17 +173,19 @@ export default function App() {
             );
           })}
           <div className="flex-1" />
-          <button
-            onClick={() => setActiveNav("settings")}
-            title="Settings"
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${
-              activeNav === "settings"
-                ? "bg-red-600 text-white"
-                : "text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-            }`}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          {canAccessSettings && (
+            <button
+              onClick={() => setActiveNav("settings")}
+              title="Settings"
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${
+                activeNav === "settings"
+                  ? "bg-red-600 text-white"
+                  : "text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          )}
           <button
             onClick={() => {
               setSession(null);
@@ -230,7 +233,7 @@ export default function App() {
           {activeNav === "reports" && <Reports />}
           {activeNav === "users" && <UsersModule />}
           {activeNav === "orders" && <Orders role={session.role} name={session.name} />}
-          {activeNav === "settings" && <SettingsPage />}
+          {activeNav === "settings" && canAccessSettings && <SettingsPage />}
         </main>
       </div>
     </div>
