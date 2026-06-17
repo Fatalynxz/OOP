@@ -151,7 +151,7 @@ export function Orders({ role, name }: { role: "admin" | "cashier" | "kitchen"; 
                 <Th>Payment</Th>
                 <Th>Status</Th>
                 <Th className="text-right">Total</Th>
-                <Th className="text-center">Actions</Th>
+                <Th className="w-24 text-center">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -179,7 +179,7 @@ export function Orders({ role, name }: { role: "admin" | "cashier" | "kitchen"; 
                       </span>
                     </Td>
                     <Td className="text-right text-neutral-100">₱{displayTotal.toFixed(2)}</Td>
-                    <Td>
+                    <Td className="w-24 text-center">
                       <div className="flex justify-center gap-1.5">
                         <button
                           onClick={() => setOpenId(o.id)}

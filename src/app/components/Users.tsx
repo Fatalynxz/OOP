@@ -172,7 +172,7 @@ export function Users() {
                 <Th>Contact</Th>
                 <Th>Role</Th>
                 <Th>Status</Th>
-                <Th className="text-center">Actions</Th>
+                <Th className="w-24 text-center">Actions</Th>
               </tr>
             </thead>
             <tbody>
@@ -227,7 +227,7 @@ export function Users() {
                       )}
                     </button>
                   </Td>
-                  <Td className="relative">
+                  <Td className="relative w-24 text-center">
                     <div className="flex justify-center">
                       <button
                         onClick={() => setOpenActions((current) => (current === s.id ? null : s.id))}
@@ -237,7 +237,7 @@ export function Users() {
                         <MoreVertical className="w-4 h-4" />
                       </button>
                       {openActions === s.id && (
-                        <div className="absolute right-4 top-9 z-20 w-36 rounded-xl border border-neutral-800 bg-neutral-950 shadow-xl overflow-hidden">
+                        <div className="absolute right-1/2 top-9 z-20 w-36 translate-x-1/2 rounded-xl border border-neutral-800 bg-neutral-950 shadow-xl overflow-hidden">
                           <button
                             onClick={() => {
                               setViewing(s);
