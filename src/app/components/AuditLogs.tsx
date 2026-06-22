@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { api } from "../api";
 
@@ -29,7 +29,17 @@ export function AuditLogs() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const load = () => {
+  const load = useCallback((showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    api<{ logs: AuditLog[] }>("/audit-logs/")
+      .then((data) => setLogs(data.logs))
+      .catch(() => {})
+      .finally(() => {
+        if (showSpinner) setLoading(false);
+      });
+  }, []);
+
+  const refresh = () => {
     setLoading(true);
     api<{ logs: AuditLog[] }>("/audit-logs/")
       .then((data) => setLogs(data.logs))
@@ -37,7 +47,16 @@ export function AuditLogs() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    const onAuditUpdated = () => load(false);
+    window.addEventListener("grabeat:audit-updated", onAuditUpdated);
+    const timer = window.setInterval(() => load(false), 3000);
+    return () => {
+      window.removeEventListener("grabeat:audit-updated", onAuditUpdated);
+      window.clearInterval(timer);
+    };
+  }, [load]);
 
   const filtered = logs.filter((log) => {
     const needle = q.toLowerCase();
@@ -58,7 +77,7 @@ export function AuditLogs() {
           <div className="text-xs text-neutral-500">Audit trail for orders, kitchen workflow, and staff changes.</div>
         </div>
         <button
-          onClick={load}
+          onClick={refresh}
           className="flex items-center gap-2 rounded-full bg-neutral-800 hover:bg-neutral-700 px-4 py-2 text-sm"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh

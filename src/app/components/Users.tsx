@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Plus, ShieldCheck, Receipt, Flame, MoreVertical, Mail, Phone, X } from "lucide-react";
 import { api } from "../api";
+import { notifyAuditChange } from "../store";
 
 type Role = "admin" | "cashier" | "kitchen";
 
@@ -111,6 +112,7 @@ export function Users({ actor }: { actor: { name: string; role: Role } }) {
       setStaff((arr) => [data.staff, ...arr]);
       setDraft({ name: "", email: "", role: "cashier" });
       setShowAdd(false);
+      notifyAuditChange();
     }).catch((error) => {
       setFormError(error instanceof Error ? error.message : "Could not create staff account.");
     });
@@ -124,7 +126,10 @@ export function Users({ actor }: { actor: { name: string; role: Role } }) {
         method: "POST",
         body: JSON.stringify({ status, actorName: actor.name, actorRole: actor.role }),
       })
-        .then((data) => setStaff((arr) => arr.map((s) => (s.id === id ? data.staff : s))))
+        .then((data) => {
+          setStaff((arr) => arr.map((s) => (s.id === id ? data.staff : s)));
+          notifyAuditChange();
+        })
         .catch(() => {});
     }
   };

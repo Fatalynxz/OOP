@@ -63,11 +63,6 @@ export function TrackOrder({ onBack }: { onBack: () => void }) {
     ["pending", "accepted", "preparing", "serving"].includes(o.status)
   );
 
-  const recentlyDone = orders
-    .filter((o) => o.status === "completed")
-    .slice(-6)
-    .reverse();
-
   return (
     <div className="size-full min-h-screen bg-neutral-950 flex flex-col overflow-hidden">
       {/* Header bar */}
@@ -148,24 +143,6 @@ export function TrackOrder({ onBack }: { onBack: () => void }) {
             );
           })}
         </div>
-
-        {/* Recently served strip */}
-        {recentlyDone.length > 0 && (
-          <div className="shrink-0 bg-neutral-900 border border-neutral-800 rounded-2xl px-5 py-3 flex items-center gap-4">
-            <div className="text-xs text-neutral-500 shrink-0">Recently Served</div>
-            <div className="flex-1 h-px bg-neutral-800" />
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {recentlyDone.map((o) => (
-                <div
-                  key={o.id}
-                  className="text-xs text-neutral-600 bg-neutral-800 rounded-lg px-3 py-1 line-through"
-                >
-                  {o.id.replace("ORD-", "")}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="shrink-0 text-center text-[11px] text-neutral-700 pb-3">

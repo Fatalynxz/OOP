@@ -26,6 +26,7 @@ export type Order = {
 const STORAGE_KEY = "grabeat.orders.v1";
 const COUNTER_KEY = "grabeat.counter.v1";
 const ORDER_CHANNEL = "grabeat.orders.channel";
+const AUDIT_EVENT = "grabeat:audit-updated";
 
 function normalizeOrderType(type: string): OrderType {
   return type === "Dine in" ? "Dine in" : "Take";
@@ -180,6 +181,12 @@ function notifyOrderChange() {
   getBroadcastChannel()?.postMessage({ type: "orders-updated" });
 }
 
+export function notifyAuditChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUDIT_EVENT));
+  }
+}
+
 function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
@@ -310,6 +317,7 @@ export const orderStore = {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
       notifyOrderChange();
+      notifyAuditChange();
     }).catch(() => {
       /* keep optimistic local order */
     });
@@ -333,6 +341,7 @@ export const orderStore = {
         orders = orders.map((x) => (x.id === id ? data.order : x));
         emit();
         notifyOrderChange();
+        notifyAuditChange();
         void refreshFromApi();
       })
       .catch(() => {})
@@ -350,6 +359,7 @@ export const orderStore = {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
       notifyOrderChange();
+      notifyAuditChange();
     }).catch(() => {});
   },
   refund(id: string, reason: string, actor?: Actor) {
@@ -362,6 +372,7 @@ export const orderStore = {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
       notifyOrderChange();
+      notifyAuditChange();
     }).catch(() => {});
   },
   reset() {
