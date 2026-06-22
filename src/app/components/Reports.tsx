@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  LabelList,
 } from "recharts";
 import { ShoppingBag, Users as UsersIcon, TrendingUp, Download } from "lucide-react";
 import { useOrders, type Order } from "../store";
@@ -208,6 +209,23 @@ function buildTopItems(orders: Order[]) {
     .slice(0, 8);
 }
 
+function buildUnitAxis(maxValue: number) {
+  const max = Math.max(1, Math.ceil(maxValue));
+  if (max <= 5) {
+    return {
+      max,
+      ticks: Array.from({ length: max + 1 }, (_, index) => index),
+    };
+  }
+
+  const step = Math.ceil(max / 4);
+  const axisMax = Math.ceil(max / step) * step;
+  return {
+    max: axisMax,
+    ticks: Array.from({ length: axisMax / step + 1 }, (_, index) => index * step),
+  };
+}
+
 function buildChannels(orders: Order[]) {
   const counts = new Map<string, number>();
   for (const order of orders) {
@@ -335,6 +353,7 @@ export function Reports() {
 
   const trend = buildTrendRows(salesOrders, range, rangeInfo.start, rangeInfo.end);
   const topItems = buildTopItems(salesOrders);
+  const topItemsAxis = buildUnitAxis(Math.max(...topItems.map((item) => item.sold), 0));
   const channels = buildChannels(salesOrders);
   const totalSales = salesOrders.reduce((sum, order) => sum + orderTotal(order), 0);
   const totalOrderCount = serviceOrders.length;
@@ -444,12 +463,23 @@ export function Reports() {
               <ResponsiveContainer>
                 <BarChart data={topItems} layout="vertical" margin={{ top: 10, right: 20, left: 40, bottom: 0 }}>
                   <CartesianGrid stroke="#262626" strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" stroke="#737373" fontSize={11} />
+                  <XAxis
+                    type="number"
+                    stroke="#737373"
+                    fontSize={11}
+                    allowDecimals={false}
+                    domain={[0, topItemsAxis.max]}
+                    ticks={topItemsAxis.ticks}
+                    tickFormatter={(value) => String(Math.round(Number(value)))}
+                  />
                   <YAxis type="category" dataKey="name" stroke="#a3a3a3" fontSize={11} width={140} />
                   <Tooltip
+                    formatter={(value) => [`${Number(value)} units`, "Sold"]}
                     contentStyle={{ background: "#171717", border: "1px solid #404040", borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="sold" fill="#f97316" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="sold" fill="#f97316" radius={[0, 6, 6, 0]}>
+                    <LabelList dataKey="sold" position="right" fill="#e5e5e5" fontSize={11} formatter={(value: number) => `${value}`} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
