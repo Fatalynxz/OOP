@@ -19,7 +19,10 @@ import { ShoppingBag, Users as UsersIcon, TrendingUp, Download } from "lucide-re
 import { useOrders, type Order } from "../store";
 
 const PESO = "\u20b1";
-const CHANNEL_COLORS = ["#f97316", "#fb923c", "#fdba74"];
+const CHANNEL_COLORS = {
+  "Dine in": "#f97316",
+  Take: "#22d3ee",
+};
 const chartTooltipStyle = {
   background: "#0a0a0a",
   border: "1px solid #525252",
@@ -242,10 +245,11 @@ function buildChannels(orders: Order[]) {
     counts.set(order.type, (counts.get(order.type) ?? 0) + 1);
   }
 
-  return ["Dine in", "Take"].map((name, index) => ({
-    name,
-    value: counts.get(name) ?? 0,
-    color: CHANNEL_COLORS[index],
+  return (["Dine in", "Take"] as const).map((type) => ({
+    name: type === "Take" ? "Take out" : type,
+    type,
+    value: counts.get(type) ?? 0,
+    color: CHANNEL_COLORS[type],
   }));
 }
 
