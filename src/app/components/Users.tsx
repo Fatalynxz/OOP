@@ -12,7 +12,6 @@ type Staff = {
   phone: string;
   role: Role;
   status: "active" | "inactive";
-  shift: string;
   lastLogin: string;
   avatarTint: string;
 };
@@ -48,13 +47,13 @@ function isValidEmail(email: string) {
 }
 
 const seed: Staff[] = [
-  { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", shift: "Morning", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
-  { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", shift: "Morning", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
-  { id: "u3", name: "Ana Cruz", email: "ana.cruz@grabeat.ph", phone: "+63 920 556 7788", role: "admin", status: "active", shift: "Full day", lastLogin: "1 hr ago", avatarTint: "from-blue-400 to-blue-600" },
-  { id: "u4", name: "Rico Tan", email: "rico.tan@grabeat.ph", phone: "+63 916 778 9911", role: "kitchen", status: "inactive", shift: "Evening", lastLogin: "Yesterday", avatarTint: "from-emerald-400 to-emerald-600" },
-  { id: "u5", name: "Liza Bautista", email: "liza.b@grabeat.ph", phone: "+63 915 332 5544", role: "cashier", status: "active", shift: "Evening", lastLogin: "3 hr ago", avatarTint: "from-pink-400 to-pink-600" },
-  { id: "u6", name: "Daniel Lim", email: "daniel.lim@grabeat.ph", phone: "+63 919 998 4422", role: "admin", status: "active", shift: "On-call", lastLogin: "Now", avatarTint: "from-purple-400 to-purple-600" },
-  { id: "u7", name: "Karen Uy", email: "karen.uy@grabeat.ph", phone: "+63 921 224 5577", role: "cashier", status: "inactive", shift: "—", lastLogin: "5 days ago", avatarTint: "from-yellow-400 to-yellow-600" },
+  { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
+  { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
+  { id: "u3", name: "Ana Cruz", email: "ana.cruz@grabeat.ph", phone: "+63 920 556 7788", role: "admin", status: "active", lastLogin: "1 hr ago", avatarTint: "from-blue-400 to-blue-600" },
+  { id: "u4", name: "Rico Tan", email: "rico.tan@grabeat.ph", phone: "+63 916 778 9911", role: "kitchen", status: "inactive", lastLogin: "Yesterday", avatarTint: "from-emerald-400 to-emerald-600" },
+  { id: "u5", name: "Liza Bautista", email: "liza.b@grabeat.ph", phone: "+63 915 332 5544", role: "cashier", status: "active", lastLogin: "3 hr ago", avatarTint: "from-pink-400 to-pink-600" },
+  { id: "u6", name: "Daniel Lim", email: "daniel.lim@grabeat.ph", phone: "+63 919 998 4422", role: "admin", status: "active", lastLogin: "Now", avatarTint: "from-purple-400 to-purple-600" },
+  { id: "u7", name: "Karen Uy", email: "karen.uy@grabeat.ph", phone: "+63 921 224 5577", role: "cashier", status: "inactive", lastLogin: "5 days ago", avatarTint: "from-yellow-400 to-yellow-600" },
 ];
 
 export function Users() {
@@ -87,9 +86,9 @@ export function Users() {
   });
 
   const counts: Record<Role, number> = {
-    admin: staff.filter((s) => s.role === "admin").length,
-    cashier: staff.filter((s) => s.role === "cashier").length,
-    kitchen: staff.filter((s) => s.role === "kitchen").length,
+    admin: staff.filter((s) => s.role === "admin" && s.status === "active").length,
+    cashier: staff.filter((s) => s.role === "cashier" && s.status === "active").length,
+    kitchen: staff.filter((s) => s.role === "kitchen" && s.status === "active").length,
   };
   const canCreateStaff = draft.name.trim().length > 0 && isValidEmail(draft.email);
 
@@ -135,7 +134,7 @@ export function Users() {
       <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
         <div>
           <h2 className="text-neutral-100">Users & Roles</h2>
-          <div className="text-xs text-neutral-500">Manage staff accounts, roles, and shifts.</div>
+          <div className="text-xs text-neutral-500">Manage staff accounts and roles.</div>
         </div>
         <button
           onClick={() => setShowAdd(true)}
@@ -145,7 +144,7 @@ export function Users() {
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 px-6 pt-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 pt-5">
         {(Object.keys(counts) as Role[]).map((r) => (
           <div key={r} className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4">
             <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${roleMeta[r].color}`}>
