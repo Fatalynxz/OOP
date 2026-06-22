@@ -43,6 +43,10 @@ function makeStaffCode(staff: Staff, allStaff: Staff[]) {
   return `${staffCodePrefix[staff.role]}-${number}`;
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 const seed: Staff[] = [
   { id: "u1", name: "Maria Reyes", email: "maria.reyes@grabeat.ph", phone: "+63 917 110 2233", role: "cashier", status: "active", shift: "Morning", lastLogin: "2 min ago", avatarTint: "from-red-500 to-red-700" },
   { id: "u2", name: "Joel Mendoza", email: "joel.m@grabeat.ph", phone: "+63 918 234 4456", role: "kitchen", status: "active", shift: "Morning", lastLogin: "15 min ago", avatarTint: "from-red-400 to-red-600" },
@@ -60,6 +64,7 @@ export function Users() {
   const [showAdd, setShowAdd] = useState(false);
   const [openActions, setOpenActions] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Staff | null>(null);
+  const [formError, setFormError] = useState("");
   const [draft, setDraft] = useState<{ name: string; email: string; role: Role }>({
     name: "",
     email: "",
@@ -86,32 +91,30 @@ export function Users() {
     cashier: staff.filter((s) => s.role === "cashier").length,
     kitchen: staff.filter((s) => s.role === "kitchen").length,
   };
+  const canCreateStaff = draft.name.trim().length > 0 && isValidEmail(draft.email);
 
   const addStaff = () => {
-    if (!draft.name.trim()) return;
+    const name = draft.name.trim();
+    const email = draft.email.trim();
+    if (!name) {
+      setFormError("Full name is required.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setFormError("Enter a valid email address, like juan@grabeat.ph.");
+      return;
+    }
+    setFormError("");
     api<{ staff: Staff }>("/staff/", {
       method: "POST",
-      body: JSON.stringify(draft),
+      body: JSON.stringify({ ...draft, name, email }),
     }).then((data) => {
       setStaff((arr) => [data.staff, ...arr]);
-    }).catch(() => {
-      setStaff((arr) => [
-        {
-          id: `u${arr.length + 1}-${Date.now()}`,
-          name: draft.name,
-          email: draft.email || `${draft.name.toLowerCase().replace(/\s+/g, ".")}@grabeat.ph`,
-          phone: "+63 9XX XXX XXXX",
-          role: draft.role,
-          status: "active",
-          shift: "Morning",
-          lastLogin: "Never",
-          avatarTint: "from-red-500 to-red-700",
-        },
-        ...arr,
-      ]);
+      setDraft({ name: "", email: "", role: "cashier" });
+      setShowAdd(false);
+    }).catch((error) => {
+      setFormError(error instanceof Error ? error.message : "Could not create staff account.");
     });
-    setDraft({ name: "", email: "", role: "cashier" });
-    setShowAdd(false);
   };
 
   const updateStatus = (id: string, status: Staff["status"]) => {
@@ -299,18 +302,33 @@ export function Users() {
             <label className="text-xs text-neutral-400 mb-1.5 block">Full name</label>
             <input
               value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              onChange={(e) => {
+                setDraft({ ...draft, name: e.target.value });
+                setFormError("");
+              }}
               placeholder="Juan Dela Cruz"
               className="w-full bg-neutral-800/70 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-red-600 mb-3"
             />
 
             <label className="text-xs text-neutral-400 mb-1.5 block">Email</label>
             <input
+              type="email"
+              required
               value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+              onChange={(e) => {
+                setDraft({ ...draft, email: e.target.value });
+                setFormError("");
+              }}
               placeholder="juan@grabeat.ph"
-              className="w-full bg-neutral-800/70 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-red-600 mb-3"
+              className={`w-full bg-neutral-800/70 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 mb-1 ${
+                draft.email && !isValidEmail(draft.email)
+                  ? "ring-1 ring-red-600 focus:ring-red-600"
+                  : "focus:ring-red-600"
+              }`}
             />
+            <div className="min-h-5 mb-2 text-xs text-red-400">
+              {formError || (draft.email && !isValidEmail(draft.email) ? "Email must include @ and a domain, like juan@grabeat.ph." : "")}
+            </div>
 
             <label className="text-xs text-neutral-400 mb-1.5 block">Role</label>
             <div className="grid grid-cols-2 gap-2 mb-5">
@@ -341,7 +359,10 @@ export function Users() {
               </button>
               <button
                 onClick={addStaff}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 text-sm"
+                disabled={!canCreateStaff}
+                className={`flex-1 rounded-xl py-2.5 text-sm text-white transition ${
+                  canCreateStaff ? "bg-red-600 hover:bg-red-700" : "bg-neutral-700 text-neutral-400 cursor-not-allowed"
+                }`}
               >
                 Create Account
               </button>

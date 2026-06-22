@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.utils import timezone
@@ -104,11 +106,18 @@ class InventoryService:
 class StaffService:
     def create(self, payload):
         name = payload["name"].strip()
+        email = (payload.get("email") or "").strip()
+        if not email:
+            raise ValueError("Email is required.")
+        try:
+            validate_email(email)
+        except ValidationError as exc:
+            raise ValueError("Enter a valid email address, like juan@grabeat.ph.") from exc
         username = payload.get("username") or name.lower().replace(" ", ".")
         return StaffUser.objects.create(
             name=name,
             username=username,
-            email=payload.get("email", ""),
+            email=email,
             phone=payload.get("phone", "+63 9XX XXX XXXX"),
             role=payload.get("role", "cashier"),
             shift=payload.get("shift", "Morning"),

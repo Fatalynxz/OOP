@@ -112,7 +112,10 @@ class StaffListView(JsonView):
 
     def post(self, request):
         self.request = request
-        staff = StaffService().create(self.payload())
+        try:
+            staff = StaffService().create(self.payload())
+        except (KeyError, ValueError) as exc:
+            return self.error(str(exc), 400)
         return self.ok({"staff": StaffSerializer.one(staff)}, status=201)
 
 
