@@ -86,10 +86,13 @@ type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | 
 
 type NotificationItem = {
   id: string;
+  eventKey: string;
   title: string;
   message: string;
+  timestamp: number;
   time: string;
   orderId?: string;
+  read: boolean;
 };
 
 const allNav: { id: NavId; label: string; icon: React.ComponentType<{ className?: string }>; roles: Role[] }[] = [
@@ -108,6 +111,58 @@ const roleLabels: Record<Role, string> = {
 };
 
 const SESSION_KEY = "grabeat.session.v1";
+const NOTIFICATION_KEY = "grabeat.notifications.v1";
+function notificationStorageKey(role: Role, suffix = "") {
+  return `${NOTIFICATION_KEY}.${role}${suffix}`;
+}
+
+function loadStoredNotifications(role: Role) {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(notificationStorageKey(role)) || "[]") as NotificationItem[];
+  } catch {
+    return [];
+  }
+}
+
+function loadStoredEventKeys(role: Role) {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notificationStorageKey(role, ".events")) || "[]") as string[]);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function saveStoredNotifications(role: Role, next: NotificationItem[]) {
+  try {
+    localStorage.setItem(notificationStorageKey(role), JSON.stringify(next.slice(0, 20)));
+  } catch {
+    /* ignore */
+  }
+}
+
+function saveStoredEventKeys(role: Role, eventKeys: Set<string>) {
+  try {
+    localStorage.setItem(notificationStorageKey(role, ".events"), JSON.stringify([...eventKeys].slice(-200)));
+  } catch {
+    /* ignore */
+  }
+}
+
+function formatNotificationTime(timestamp: number) {
+  const date = new Date(timestamp);
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function orderNotificationTimestamp(order: Order, kind: "new" | "status") {
+  return kind === "new" ? order.createdAt : order.updatedAt ?? order.createdAt;
+}
 
 function makeOrderNotification(
   order: Order,
@@ -117,11 +172,15 @@ function makeOrderNotification(
 ): NotificationItem | null {
   if (!role) return null;
 
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const timestamp = orderNotificationTimestamp(order, kind);
+  const eventKey = `${role}:${order.id}:${kind}:${order.status}:${timestamp}`;
   const base = {
-    id: `${order.id}-${order.status}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    time,
+    id: eventKey,
+    eventKey,
+    timestamp,
+    time: formatNotificationTime(timestamp),
     orderId: order.id,
+    read: false,
   };
 
   if (kind === "new") {
@@ -192,8 +251,27 @@ export default function App() {
   const [activeNav, setActiveNav] = useState<NavId>("pos");
   const [publicView, setPublicView] = useState<"login" | "track">("login");
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsReady, setNotificationsReady] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const orderSnapshot = useRef<Map<string, Status>>(new Map());
+  const notifiedEvents = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!session) {
+      setNotificationsReady(false);
+      return;
+    }
+    setNotificationsReady(false);
+    setNotifications(loadStoredNotifications(session.role));
+    notifiedEvents.current = loadStoredEventKeys(session.role);
+    orderSnapshot.current = new Map();
+    setNotificationsReady(true);
+  }, [session?.role]);
+
+  useEffect(() => {
+    if (!session || !notificationsReady) return;
+    saveStoredNotifications(session.role, notifications);
+  }, [notifications, notificationsReady, session?.role]);
 
   useEffect(() => {
     const nextSnapshot = new Map(orders.map((order) => [order.id, order.status]));
@@ -208,12 +286,18 @@ export default function App() {
       const previousStatus = previous.get(order.id);
       if (!previousStatus) {
         const notification = makeOrderNotification(order, "new", session?.role);
-        if (notification) created.push(notification);
+        if (notification && !notifiedEvents.current.has(notification.eventKey)) {
+          notifiedEvents.current.add(notification.eventKey);
+          created.push(notification);
+        }
         continue;
       }
       if (previousStatus !== order.status) {
         const notification = makeOrderNotification(order, "status", session?.role, previousStatus);
-        if (notification) created.push(notification);
+        if (notification && !notifiedEvents.current.has(notification.eventKey)) {
+          notifiedEvents.current.add(notification.eventKey);
+          created.push(notification);
+        }
       }
     }
 
@@ -221,6 +305,7 @@ export default function App() {
     const visible = created.filter(Boolean) as NotificationItem[];
     if (visible.length) {
       setNotifications((current) => [...visible, ...current].slice(0, 12));
+      if (session?.role) saveStoredEventKeys(session.role, notifiedEvents.current);
     }
   }, [orders, session?.role]);
 
@@ -253,6 +338,7 @@ export default function App() {
 
   const nav = allNav.filter((n) => n.roles.includes(session.role));
   const canAccessSettings = session.role === "admin";
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   return (
     <div className="size-full min-h-screen bg-neutral-950 flex">
@@ -329,14 +415,21 @@ export default function App() {
             <div className="flex-1" />
             <div className="relative">
             <button
-              onClick={() => setNotifOpen((open) => !open)}
+              onClick={() => {
+                setNotifOpen((open) => !open);
+                setNotifications((current) =>
+                  current.some((item) => !item.read)
+                    ? current.map((item) => ({ ...item, read: true }))
+                    : current,
+                );
+              }}
               className="relative w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center"
               title="Notifications"
             >
               <Bell className="w-4 h-4 text-white" />
-              {notifications.length > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                  {notifications.length > 9 ? "9+" : notifications.length}
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
@@ -345,7 +438,9 @@ export default function App() {
                 <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
                   <div>
                     <div className="text-sm text-neutral-100">Notifications</div>
-                    <div className="text-[11px] text-neutral-500">{notifications.length} unread updates</div>
+                    <div className="text-[11px] text-neutral-500">
+                      {unreadCount} unread · {notifications.length} recent updates
+                    </div>
                   </div>
                   {notifications.length > 0 && (
                     <button
@@ -371,9 +466,9 @@ export default function App() {
                         className="w-full text-left px-4 py-3 border-b border-neutral-900 hover:bg-neutral-900/80 transition"
                       >
                         <div className="flex items-start gap-3">
-                          <span className="mt-1 h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                          <span className={`mt-1 h-2 w-2 rounded-full shrink-0 ${item.read ? "bg-neutral-700" : "bg-red-500"}`} />
                           <div className="min-w-0">
-                            <div className="text-sm text-neutral-100">{item.title}</div>
+                            <div className={`text-sm ${item.read ? "text-neutral-300" : "text-neutral-100"}`}>{item.title}</div>
                             <div className="text-xs text-neutral-400 mt-0.5">{item.message}</div>
                             <div className="text-[11px] text-neutral-600 mt-1">{item.time}</div>
                           </div>

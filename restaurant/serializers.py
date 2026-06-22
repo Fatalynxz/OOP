@@ -70,6 +70,7 @@ class OrderSerializer:
             "type": order_type_label(order.order_type),
             "placedAt": order.placed_at_label,
             "createdAt": int(order.created_at.timestamp() * 1000),
+            "updatedAt": int(order.updated_at.timestamp() * 1000),
             "items": [OrderSerializer.item(item) for item in order.items.all()],
             "status": order.status,
             "priority": order.priority,

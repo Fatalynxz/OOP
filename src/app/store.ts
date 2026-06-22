@@ -12,6 +12,7 @@ export type Order = {
   type: OrderType;
   placedAt: string;
   createdAt: number;
+  updatedAt?: number;
   items: OrderItem[];
   status: Status;
   priority?: "rush" | "normal";
@@ -288,11 +289,13 @@ export const orderStore = {
   add(o: Omit<Order, "id" | "createdAt" | "placedAt" | "status">) {
     const now = new Date();
     const id = `ORD-${counter++}`;
+    const timestamp = Date.now();
     orders = [
       {
         ...o,
         id,
-        createdAt: Date.now(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
         placedAt: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
         status: "pending",
       },
@@ -318,7 +321,7 @@ export const orderStore = {
       if (x.id !== id) return x;
       if (!ACTIVE_FLOW.includes(x.status)) return x;
       const idx = ACTIVE_FLOW.indexOf(x.status);
-      return { ...x, status: ACTIVE_FLOW[Math.min(idx + 1, ACTIVE_FLOW.length - 1)] };
+      return { ...x, status: ACTIVE_FLOW[Math.min(idx + 1, ACTIVE_FLOW.length - 1)], updatedAt: Date.now() };
     });
     emit();
     void api<{ order: Order }>(`/orders/${id}/advance/`, { method: "POST" })
@@ -334,7 +337,7 @@ export const orderStore = {
       });
   },
   voidOrder(id: string, reason: string) {
-    orders = orders.map((x) => (x.id === id ? { ...x, status: "voided", voidReason: reason } : x));
+    orders = orders.map((x) => (x.id === id ? { ...x, status: "voided", voidReason: reason, updatedAt: Date.now() } : x));
     emit();
     void api<{ order: Order }>(`/orders/${id}/void/`, {
       method: "POST",
@@ -346,7 +349,7 @@ export const orderStore = {
     }).catch(() => {});
   },
   refund(id: string, reason: string) {
-    orders = orders.map((x) => (x.id === id ? { ...x, status: "refunded", refundReason: reason } : x));
+    orders = orders.map((x) => (x.id === id ? { ...x, status: "refunded", refundReason: reason, updatedAt: Date.now() } : x));
     emit();
     void api<{ order: Order }>(`/orders/${id}/refund/`, {
       method: "POST",
