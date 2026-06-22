@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutGrid,
   ClipboardList,
@@ -33,7 +33,7 @@ import { Orders } from "./components/Orders";
 import { TrackOrder } from "./components/TrackOrder";
 import { SettingsPage } from "./components/Settings";
 import { BrandLogo, BRAND } from "./components/Brand";
-import { orderStore } from "./store";
+import { orderStore, useOrders, type Order, type Status } from "./store";
 
 type Category = { id: string; name: string; icon: React.ReactNode };
 
@@ -84,6 +84,14 @@ const menu: MenuItem[] = [
 
 type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | "settings";
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  orderId?: string;
+};
+
 const allNav: { id: NavId; label: string; icon: React.ComponentType<{ className?: string }>; roles: Role[] }[] = [
   { id: "pos", label: "Order Counter", icon: LayoutGrid, roles: ["cashier", "admin"] },
   { id: "orders", label: "Orders", icon: ClipboardList, roles: ["cashier", "admin"] },
@@ -101,7 +109,75 @@ const roleLabels: Record<Role, string> = {
 
 const SESSION_KEY = "grabeat.session.v1";
 
+function makeOrderNotification(
+  order: Order,
+  kind: "new" | "status",
+  role?: Role,
+  previousStatus?: Status,
+): NotificationItem | null {
+  if (!role) return null;
+
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const base = {
+    id: `${order.id}-${order.status}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    time,
+    orderId: order.id,
+  };
+
+  if (kind === "new") {
+    if (role !== "kitchen" && role !== "admin") return null;
+    return {
+      ...base,
+      title: "New kitchen order",
+      message: `${order.id} is waiting for kitchen action.`,
+    };
+  }
+
+  if (order.status === "accepted" && role !== "kitchen") {
+    return {
+      ...base,
+      title: "Order accepted",
+      message: `${order.id} was accepted by kitchen.`,
+    };
+  }
+
+  if (order.status === "preparing" && role !== "kitchen") {
+    return {
+      ...base,
+      title: "Order now preparing",
+      message: `${order.id} moved from ${previousStatus ?? "previous status"} to preparing.`,
+    };
+  }
+
+  if (order.status === "serving" && role !== "kitchen") {
+    return {
+      ...base,
+      title: "Order ready for pickup",
+      message: `${order.id} is ready to serve.`,
+    };
+  }
+
+  if (order.status === "completed" && role === "admin") {
+    return {
+      ...base,
+      title: "Order completed",
+      message: `${order.id} was completed.`,
+    };
+  }
+
+  if ((order.status === "voided" || order.status === "refunded") && role === "admin") {
+    return {
+      ...base,
+      title: order.status === "voided" ? "Order voided" : "Order refunded",
+      message: `${order.id} needs manager review.`,
+    };
+  }
+
+  return null;
+}
+
 export default function App() {
+  const orders = useOrders();
   const [session, setSession] = useState<{ role: Role; name: string } | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -115,6 +191,38 @@ export default function App() {
   });
   const [activeNav, setActiveNav] = useState<NavId>("pos");
   const [publicView, setPublicView] = useState<"login" | "track">("login");
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const orderSnapshot = useRef<Map<string, Status>>(new Map());
+
+  useEffect(() => {
+    const nextSnapshot = new Map(orders.map((order) => [order.id, order.status]));
+    const previous = orderSnapshot.current;
+    if (previous.size === 0) {
+      orderSnapshot.current = nextSnapshot;
+      return;
+    }
+
+    const created: NotificationItem[] = [];
+    for (const order of orders) {
+      const previousStatus = previous.get(order.id);
+      if (!previousStatus) {
+        const notification = makeOrderNotification(order, "new", session?.role);
+        if (notification) created.push(notification);
+        continue;
+      }
+      if (previousStatus !== order.status) {
+        const notification = makeOrderNotification(order, "status", session?.role, previousStatus);
+        if (notification) created.push(notification);
+      }
+    }
+
+    orderSnapshot.current = nextSnapshot;
+    const visible = created.filter(Boolean) as NotificationItem[];
+    if (visible.length) {
+      setNotifications((current) => [...visible, ...current].slice(0, 12));
+    }
+  }, [orders, session?.role]);
 
   if (!session) {
     if (publicView === "track") {
@@ -219,12 +327,64 @@ export default function App() {
               </div>
             </div>
             <div className="flex-1" />
-            <button className="relative w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center">
+            <div className="relative">
+            <button
+              onClick={() => setNotifOpen((open) => !open)}
+              className="relative w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center"
+              title="Notifications"
+            >
               <Bell className="w-4 h-4 text-white" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                3
-              </span>
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
+                  {notifications.length > 9 ? "9+" : notifications.length}
+                </span>
+              )}
             </button>
+            {notifOpen && (
+              <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+                  <div>
+                    <div className="text-sm text-neutral-100">Notifications</div>
+                    <div className="text-[11px] text-neutral-500">{notifications.length} unread updates</div>
+                  </div>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="text-[11px] text-red-400 hover:text-red-300"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-neutral-500">No new notifications</div>
+                  ) : (
+                    notifications.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          if (session.role === "kitchen") setActiveNav("kitchen");
+                          else if (item.orderId) setActiveNav("orders");
+                          setNotifOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-3 border-b border-neutral-900 hover:bg-neutral-900/80 transition"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="mt-1 h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-sm text-neutral-100">{item.title}</div>
+                            <div className="text-xs text-neutral-400 mt-0.5">{item.message}</div>
+                            <div className="text-[11px] text-neutral-600 mt-1">{item.time}</div>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            </div>
           </div>
 
           {activeNav === "pos" && <POS cashier={session.name} />}
