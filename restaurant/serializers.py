@@ -98,3 +98,20 @@ class InventorySerializer:
             "supplier": item.supplier,
             "updated": item.updated_at.strftime("%b %d, %H:%M"),
         }
+
+
+class AuditLogSerializer:
+    @staticmethod
+    def one(log):
+        return {
+            "id": log.id,
+            "actorName": log.actor_name,
+            "actorRole": log.actor_role,
+            "action": log.action,
+            "summary": log.summary,
+            "objectType": log.object_type,
+            "objectId": log.object_id,
+            "metadata": log.metadata,
+            "createdAt": int(log.created_at.timestamp() * 1000),
+            "createdLabel": log.created_at.strftime("%b %d, %Y %I:%M %p"),
+        }

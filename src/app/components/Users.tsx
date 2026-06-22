@@ -56,7 +56,7 @@ const seed: Staff[] = [
   { id: "u7", name: "Karen Uy", email: "karen.uy@grabeat.ph", phone: "+63 921 224 5577", role: "cashier", status: "inactive", lastLogin: "5 days ago", avatarTint: "from-yellow-400 to-yellow-600" },
 ];
 
-export function Users() {
+export function Users({ actor }: { actor: { name: string; role: Role } }) {
   const [staff, setStaff] = useState<Staff[]>(seed);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
@@ -106,7 +106,7 @@ export function Users() {
     setFormError("");
     api<{ staff: Staff }>("/staff/", {
       method: "POST",
-      body: JSON.stringify({ ...draft, name, email }),
+      body: JSON.stringify({ ...draft, name, email, actorName: actor.name, actorRole: actor.role }),
     }).then((data) => {
       setStaff((arr) => [data.staff, ...arr]);
       setDraft({ name: "", email: "", role: "cashier" });
@@ -122,7 +122,7 @@ export function Users() {
     if (target?.dbId) {
       void api<{ staff: Staff }>(`/staff/${target.dbId}/status/`, {
         method: "POST",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, actorName: actor.name, actorRole: actor.role }),
       })
         .then((data) => setStaff((arr) => arr.map((s) => (s.id === id ? data.staff : s))))
         .catch(() => {});

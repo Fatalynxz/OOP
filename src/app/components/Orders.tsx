@@ -86,8 +86,9 @@ export function Orders({ role, name }: { role: "admin" | "cashier" | "kitchen"; 
 
   const commitAction = () => {
     if (!confirm) return;
-    if (confirm.action === "void") orderStore.voidOrder(confirm.id, reason || "No reason given");
-    else orderStore.refund(confirm.id, reason || "No reason given");
+    const actor = { name, role };
+    if (confirm.action === "void") orderStore.voidOrder(confirm.id, reason || "No reason given", actor);
+    else orderStore.refund(confirm.id, reason || "No reason given", actor);
     setConfirm(null);
     setReason("");
   };

@@ -9,7 +9,7 @@ import {
   Flame,
   AlertCircle,
 } from "lucide-react";
-import { kitchenLoad, orderStore, useOrders, type Status } from "../store";
+import { kitchenLoad, orderStore, useOrders, type Actor, type Status } from "../store";
 
 type Col = {
   id: Status | "new";
@@ -74,7 +74,7 @@ function useNow() {
   return now;
 }
 
-export function Kitchen() {
+export function Kitchen({ actor }: { actor: Actor }) {
   const orders = useOrders();
   const now = useNow();
   const load = kitchenLoad(orders);
@@ -220,7 +220,7 @@ export function Kitchen() {
                           {/* One-tap action */}
                           {o.status !== "completed" && (
                             <button
-                              onClick={() => orderStore.advance(o.id)}
+                              onClick={() => orderStore.advance(o.id, actor)}
                               className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs transition ${
                                 overdue
                                   ? "bg-red-600 hover:bg-red-500 text-white"

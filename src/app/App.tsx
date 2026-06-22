@@ -16,6 +16,7 @@ import {
   Printer,
   Bell,
   CircleDot,
+  History,
   Utensils,
   Layers,
   Soup,
@@ -34,6 +35,7 @@ import { Users as UsersModule } from "./components/Users";
 import { Orders } from "./components/Orders";
 import { TrackOrder } from "./components/TrackOrder";
 import { SettingsPage } from "./components/Settings";
+import { AuditLogs } from "./components/AuditLogs";
 import { BrandLogo, BRAND } from "./components/Brand";
 import { orderStore, useOrders, type Order, type Status } from "./store";
 
@@ -166,7 +168,7 @@ const takoyakiMenu: MenuItem[] = [
   },
 ];
 
-type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | "settings";
+type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | "audit" | "settings";
 
 type NotificationItem = {
   id: string;
@@ -186,6 +188,7 @@ const allNav: { id: NavId; label: string; icon: React.ComponentType<{ className?
   { id: "inventory", label: "Inventory", icon: Boxes, roles: ["admin"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
   { id: "users", label: "Users", icon: Users, roles: ["admin"] },
+  { id: "audit", label: "Activity Logs", icon: History, roles: ["admin"] },
 ];
 
 const roleLabels: Record<Role, string> = {
@@ -567,10 +570,11 @@ export default function App() {
           </div>
 
           {activeNav === "pos" && <POS cashier={session.name} />}
-          {activeNav === "kitchen" && <Kitchen />}
+          {activeNav === "kitchen" && <Kitchen actor={{ name: session.name, role: session.role }} />}
           {activeNav === "inventory" && <Inventory />}
           {activeNav === "reports" && <Reports />}
-          {activeNav === "users" && <UsersModule />}
+          {activeNav === "users" && <UsersModule actor={{ name: session.name, role: session.role }} />}
+          {activeNav === "audit" && <AuditLogs />}
           {activeNav === "orders" && <Orders role={session.role} name={session.name} />}
           {activeNav === "settings" && canAccessSettings && <SettingsPage />}
         </main>

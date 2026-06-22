@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AuditLogListView,
     AuthLoginView,
     InventoryAdjustView,
     InventoryListView,
@@ -28,5 +29,6 @@ urlpatterns = [
     path("staff/", StaffListView.as_view()),
     path("staff/<int:pk>/cycle-status/", StaffCycleStatusView.as_view()),
     path("staff/<int:pk>/status/", StaffStatusView.as_view()),
+    path("audit-logs/", AuditLogListView.as_view()),
     path("reports/today/", ReportTodayView.as_view()),
 ]

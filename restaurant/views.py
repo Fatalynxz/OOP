@@ -7,8 +7,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import AddOn
 from .repositories import InventoryRepository, MenuRepository, OrderRepository, StaffRepository
-from .serializers import InventorySerializer, MenuSerializer, OrderSerializer, StaffSerializer
-from .services import AuthService, InventoryService, OrderService, ReportService, StaffService
+from .serializers import AuditLogSerializer, InventorySerializer, MenuSerializer, OrderSerializer, StaffSerializer
+from .services import AuditService, AuthService, InventoryService, OrderService, ReportService, StaffService
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -60,9 +60,23 @@ class OrderListView(JsonView):
 
 class OrderActionView(JsonView):
     actions = {
-        "advance": lambda service, order_no, payload: service.advance(order_no),
-        "void": lambda service, order_no, payload: service.void(order_no, payload.get("reason", "")),
-        "refund": lambda service, order_no, payload: service.refund(order_no, payload.get("reason", "")),
+        "advance": lambda service, order_no, payload: service.advance(
+            order_no,
+            payload.get("actorName", "Kitchen Staff"),
+            payload.get("actorRole", "kitchen"),
+        ),
+        "void": lambda service, order_no, payload: service.void(
+            order_no,
+            payload.get("reason", ""),
+            payload.get("actorName", "Staff"),
+            payload.get("actorRole", "cashier"),
+        ),
+        "refund": lambda service, order_no, payload: service.refund(
+            order_no,
+            payload.get("reason", ""),
+            payload.get("actorName", "Staff"),
+            payload.get("actorRole", "cashier"),
+        ),
     }
 
     def post(self, request, order_no, action):
@@ -112,8 +126,13 @@ class StaffListView(JsonView):
 
     def post(self, request):
         self.request = request
+        payload = self.payload()
         try:
-            staff = StaffService().create(self.payload())
+            staff = StaffService().create(
+                payload,
+                payload.get("actorName", "Admin"),
+                payload.get("actorRole", "admin"),
+            )
         except (KeyError, ValueError) as exc:
             return self.error(str(exc), 400)
         return self.ok({"staff": StaffSerializer.one(staff)}, status=201)
@@ -130,11 +149,23 @@ class StaffCycleStatusView(JsonView):
 class StaffStatusView(JsonView):
     def post(self, request, pk):
         self.request = request
+        payload = self.payload()
         try:
-            staff = StaffService().set_status(pk, self.payload().get("status"))
+            staff = StaffService().set_status(
+                pk,
+                payload.get("status"),
+                payload.get("actorName", "Admin"),
+                payload.get("actorRole", "admin"),
+            )
         except ValueError as exc:
             return self.error(str(exc), 400)
         return self.ok({"staff": StaffSerializer.one(staff)})
+
+
+class AuditLogListView(JsonView):
+    def get(self, request):
+        logs = [AuditLogSerializer.one(log) for log in AuditService().recent()]
+        return self.ok({"logs": logs})
 
 
 class ReportTodayView(JsonView):

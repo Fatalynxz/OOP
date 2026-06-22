@@ -170,3 +170,19 @@ class AppSetting(TimestampedModel):
 
     def __str__(self):
         return self.key
+
+
+class AuditLog(TimestampedModel):
+    actor_name = models.CharField(max_length=120)
+    actor_role = models.CharField(max_length=40, blank=True)
+    action = models.CharField(max_length=80)
+    summary = models.CharField(max_length=255)
+    object_type = models.CharField(max_length=80, blank=True)
+    object_id = models.CharField(max_length=80, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.summary

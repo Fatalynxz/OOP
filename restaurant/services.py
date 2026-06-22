@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.utils import timezone
 
-from .models import InventoryItem, Order, OrderItem, OrderItemAddOn, StaffUser
+from .models import AuditLog, InventoryItem, Order, OrderItem, OrderItemAddOn, StaffUser
 from .repositories import InventoryRepository, OrderRepository, StaffRepository
 
 
@@ -55,28 +55,67 @@ class OrderService:
                     name=add_on.get("name", "Add-on"),
                     price=Decimal(str(add_on.get("price") or 0)),
                 )
-        return self.repo.get_by_no(order.order_no)
+        order = self.repo.get_by_no(order.order_no)
+        actor = payload.get("actorName") or order.cashier or "Cashier"
+        AuditService.record(
+            actor_name=actor,
+            actor_role=payload.get("actorRole") or "cashier",
+            action="order.created",
+            summary=f"{actor} created {order.order_no}",
+            object_type="order",
+            object_id=order.order_no,
+            metadata={"total": float(order.total), "items": len(payload.get("items", []))},
+        )
+        return order
 
-    def advance(self, order_no):
+    def advance(self, order_no, actor_name="Kitchen Staff", actor_role="kitchen"):
         order = self.repo.get_by_no(order_no)
+        previous_status = order.status
         if order.status in self.ACTIVE_FLOW:
             idx = self.ACTIVE_FLOW.index(order.status)
             order.status = self.ACTIVE_FLOW[min(idx + 1, len(self.ACTIVE_FLOW) - 1)]
             order.save(update_fields=["status", "updated_at"])
+            AuditService.record(
+                actor_name=actor_name or "Kitchen Staff",
+                actor_role=actor_role or "kitchen",
+                action="order.status_changed",
+                summary=f"{actor_name or 'Kitchen Staff'} moved {order.order_no} to {order.status.title()}",
+                object_type="order",
+                object_id=order.order_no,
+                metadata={"from": previous_status, "to": order.status},
+            )
         return self.repo.get_by_no(order_no)
 
-    def void(self, order_no, reason):
+    def void(self, order_no, reason, actor_name="Staff", actor_role="cashier"):
         order = self.repo.get_by_no(order_no)
         order.status = "voided"
         order.void_reason = reason or "No reason given"
         order.save(update_fields=["status", "void_reason", "updated_at"])
+        AuditService.record(
+            actor_name=actor_name or "Staff",
+            actor_role=actor_role or "cashier",
+            action="order.voided",
+            summary=f"{actor_name or 'Staff'} voided {order.order_no}",
+            object_type="order",
+            object_id=order.order_no,
+            metadata={"reason": order.void_reason},
+        )
         return self.repo.get_by_no(order_no)
 
-    def refund(self, order_no, reason):
+    def refund(self, order_no, reason, actor_name="Staff", actor_role="cashier"):
         order = self.repo.get_by_no(order_no)
         order.status = "refunded"
         order.refund_reason = reason or "No reason given"
         order.save(update_fields=["status", "refund_reason", "updated_at"])
+        AuditService.record(
+            actor_name=actor_name or "Staff",
+            actor_role=actor_role or "cashier",
+            action="order.refunded",
+            summary=f"{actor_name or 'Staff'} refunded {order.order_no}",
+            object_type="order",
+            object_id=order.order_no,
+            metadata={"reason": order.refund_reason},
+        )
         return self.repo.get_by_no(order_no)
 
     def reset(self):
@@ -104,7 +143,7 @@ class InventoryService:
 
 
 class StaffService:
-    def create(self, payload):
+    def create(self, payload, actor_name="Admin", actor_role="admin"):
         name = payload["name"].strip()
         email = (payload.get("email") or "").strip()
         if not email:
@@ -114,7 +153,7 @@ class StaffService:
         except ValidationError as exc:
             raise ValueError("Enter a valid email address, like juan@grabeat.ph.") from exc
         username = payload.get("username") or name.lower().replace(" ", ".")
-        return StaffUser.objects.create(
+        staff = StaffUser.objects.create(
             name=name,
             username=username,
             email=email,
@@ -123,14 +162,51 @@ class StaffService:
             shift=payload.get("shift", "Morning"),
             password=payload.get("password", "grabeat123"),
         )
+        AuditService.record(
+            actor_name=actor_name or "Admin",
+            actor_role=actor_role or "admin",
+            action="staff.created",
+            summary=f"{actor_name or 'Admin'} created staff account for {staff.name}",
+            object_type="staff",
+            object_id=str(staff.id),
+            metadata={"staff": staff.name, "role": staff.role},
+        )
+        return staff
 
-    def set_status(self, pk, status):
+    def set_status(self, pk, status, actor_name="Admin", actor_role="admin"):
         if status not in ["active", "inactive"]:
             raise ValueError("Status must be active or inactive.")
         staff = StaffUser.objects.get(pk=pk)
+        previous_status = "active" if staff.status == "active" else "inactive"
         staff.status = "active" if status == "active" else "off"
         staff.save(update_fields=["status", "updated_at"])
+        AuditService.record(
+            actor_name=actor_name or "Admin",
+            actor_role=actor_role or "admin",
+            action="staff.status_changed",
+            summary=f"{actor_name or 'Admin'} changed {staff.name}'s status to {status.title()}",
+            object_type="staff",
+            object_id=str(staff.id),
+            metadata={"staff": staff.name, "from": previous_status, "to": status},
+        )
         return staff
+
+
+class AuditService:
+    @staticmethod
+    def record(actor_name, actor_role, action, summary, object_type="", object_id="", metadata=None):
+        return AuditLog.objects.create(
+            actor_name=actor_name or "System",
+            actor_role=actor_role or "",
+            action=action,
+            summary=summary,
+            object_type=object_type,
+            object_id=object_id,
+            metadata=metadata or {},
+        )
+
+    def recent(self, limit=100):
+        return AuditLog.objects.all()[:limit]
 
 
 class ReportService:

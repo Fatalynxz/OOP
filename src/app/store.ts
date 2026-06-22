@@ -272,6 +272,7 @@ function stopPollingIfIdle() {
 }
 
 const ACTIVE_FLOW: Status[] = ["pending", "accepted", "preparing", "serving", "completed"];
+export type Actor = { name: string; role: "admin" | "cashier" | "kitchen" };
 
 export const orderStore = {
   subscribe(fn: () => void) {
@@ -314,7 +315,7 @@ export const orderStore = {
     });
     return id;
   },
-  advance(id: string) {
+  advance(id: string, actor?: Actor) {
     if (advancing.has(id)) return;
     advancing.add(id);
     orders = orders.map((x) => {
@@ -324,7 +325,10 @@ export const orderStore = {
       return { ...x, status: ACTIVE_FLOW[Math.min(idx + 1, ACTIVE_FLOW.length - 1)], updatedAt: Date.now() };
     });
     emit();
-    void api<{ order: Order }>(`/orders/${id}/advance/`, { method: "POST" })
+    void api<{ order: Order }>(`/orders/${id}/advance/`, {
+      method: "POST",
+      body: JSON.stringify({ actorName: actor?.name, actorRole: actor?.role }),
+    })
       .then((data) => {
         orders = orders.map((x) => (x.id === id ? data.order : x));
         emit();
@@ -336,24 +340,24 @@ export const orderStore = {
         advancing.delete(id);
       });
   },
-  voidOrder(id: string, reason: string) {
+  voidOrder(id: string, reason: string, actor?: Actor) {
     orders = orders.map((x) => (x.id === id ? { ...x, status: "voided", voidReason: reason, updatedAt: Date.now() } : x));
     emit();
     void api<{ order: Order }>(`/orders/${id}/void/`, {
       method: "POST",
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, actorName: actor?.name, actorRole: actor?.role }),
     }).then((data) => {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
       notifyOrderChange();
     }).catch(() => {});
   },
-  refund(id: string, reason: string) {
+  refund(id: string, reason: string, actor?: Actor) {
     orders = orders.map((x) => (x.id === id ? { ...x, status: "refunded", refundReason: reason, updatedAt: Date.now() } : x));
     emit();
     void api<{ order: Order }>(`/orders/${id}/refund/`, {
       method: "POST",
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, actorName: actor?.name, actorRole: actor?.role }),
     }).then((data) => {
       orders = orders.map((x) => (x.id === id ? data.order : x));
       emit();
