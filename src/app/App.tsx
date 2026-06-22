@@ -22,6 +22,8 @@ import {
   Cookie,
   Sandwich,
   PackagePlus,
+  Coffee,
+  CupSoda,
 } from "lucide-react";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import { Login, type Role } from "./components/Login";
@@ -47,6 +49,7 @@ type MenuItem = {
   image: string;
   stock: number;
   variants?: { id: string; label: string; price: number }[];
+  icon?: React.ReactNode;
 };
 
 const categories: Category[] = [
@@ -56,6 +59,7 @@ const categories: Category[] = [
   { id: "noodles",     name: "Yakisoba",          icon: <Soup className="w-4 h-4" /> },
   { id: "taiyaki",     name: "Taiyaki",           icon: <Cookie className="w-4 h-4" /> },
   { id: "tonkatsu",    name: "Tonkatsu",          icon: <Sandwich className="w-4 h-4" /> },
+  { id: "drinks",      name: "Drinks",            icon: <CupSoda className="w-4 h-4" /> },
   { id: "addons",      name: "Add-ons",           icon: <PackagePlus className="w-4 h-4" /> },
 ];
 
@@ -81,6 +85,13 @@ const menu: MenuItem[] = [
   { id: "m14", name: "Taiyaki Mix 6pcs",         desc: "Assorted taiyaki with mixed fillings — best seller!",         price: 139, category: "taiyaki",     image: "https://images.unsplash.com/photo-1766375887711-1217eddb3b46?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", stock: 15 },
   // Tonkatsu
   { id: "m15", name: "Tonkatsu",                 desc: "Japanese breaded deep-fried pork cutlet, served with sauce.", price: 149, category: "tonkatsu",    image: "https://images.unsplash.com/photo-1496112774951-bf41010eed5e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", stock: 18 },
+  // Drinks
+  { id: "d1", name: "Ice Coffee",        desc: "16oz iced coffee.",         price: 60, category: "drinks", image: "", stock: 50, icon: <Coffee className="w-14 h-14" /> },
+  { id: "d2", name: "Ice Spanish Latte", desc: "16oz iced Spanish latte.", price: 70, category: "drinks", image: "", stock: 50, icon: <Coffee className="w-14 h-14" /> },
+  { id: "d3", name: "Coffee Float",      desc: "16oz coffee float.",       price: 80, category: "drinks", image: "", stock: 50, icon: <Coffee className="w-14 h-14" /> },
+  { id: "d4", name: "Coke Float",        desc: "16oz coke float.",         price: 50, category: "drinks", image: "", stock: 50, icon: <CupSoda className="w-14 h-14" /> },
+  { id: "d5", name: "Ice Choco",         desc: "16oz iced chocolate.",     price: 60, category: "drinks", image: "", stock: 50, icon: <CupSoda className="w-14 h-14" /> },
+  { id: "d6", name: "Choco Float",       desc: "16oz chocolate float.",    price: 80, category: "drinks", image: "", stock: 50, icon: <CupSoda className="w-14 h-14" /> },
 ];
 
 const takoyakiMenu: MenuItem[] = [
@@ -593,6 +604,7 @@ const ADD_ONS_BY_CATEGORY: Record<string, string[]> = {
   noodles: ["ao10", "ao1", "ao12"],
   taiyaki: [],
   tonkatsu: ["ao7", "ao9", "ao10", "ao11", "ao12"],
+  drinks: [],
 };
 
 function addOnsForItem(item: MenuItem) {
@@ -775,11 +787,17 @@ function POS({ cashier }: { cashier: string }) {
                   className="bg-neutral-800/60 rounded-2xl p-3 flex flex-col hover:bg-neutral-800 transition group"
                 >
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3] mb-3">
-                    <ImageWithFallback
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition"
-                    />
+                    {item.icon ? (
+                      <div className="w-full h-full bg-gradient-to-br from-neutral-900 via-neutral-800 to-red-950/40 flex items-center justify-center text-red-300 group-hover:text-red-200 transition">
+                        {item.icon}
+                      </div>
+                    ) : (
+                      <ImageWithFallback
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                    )}
                     {low && (
                       <span className="absolute top-2 left-2 bg-red-500/90 text-white text-[10px] px-2 py-1 rounded-full">
                         Low stock · {item.stock}
@@ -859,6 +877,8 @@ function POS({ cashier }: { cashier: string }) {
                     <span className="text-2xl">
                       {ADD_ONS.find((a) => `addon-${a.id}` === item.id)?.emoji ?? "➕"}
                     </span>
+                  ) : item.icon ? (
+                    <span className="text-red-300 [&_svg]:w-7 [&_svg]:h-7">{item.icon}</span>
                   ) : (
                     <ImageWithFallback
                       src={item.image}
@@ -1045,7 +1065,13 @@ function AddOnPicker({
         {/* Header */}
         <div className="flex items-center gap-3 p-5 border-b border-neutral-800">
           <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
-            <ImageWithFallback src={item.image} alt={item.name} className="w-full h-full object-cover" />
+            {item.icon ? (
+              <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-red-300 [&_svg]:w-7 [&_svg]:h-7">
+                {item.icon}
+              </div>
+            ) : (
+              <ImageWithFallback src={item.image} alt={item.name} className="w-full h-full object-cover" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-neutral-100">{item.name}</div>

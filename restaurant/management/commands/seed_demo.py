@@ -31,6 +31,7 @@ class Command(BaseCommand):
             ("noodles", "Yakisoba"),
             ("taiyaki", "Taiyaki"),
             ("tonkatsu", "Tonkatsu"),
+            ("drinks", "Drinks"),
             ("addons", "Add-ons"),
         ]
         category_map = {}
@@ -61,6 +62,12 @@ class Command(BaseCommand):
             ("m11", "Taiyaki Cheese 6pcs", "Fish-shaped cake with cheese filling.", 119, "taiyaki", 24),
             ("m14", "Taiyaki Mix 6pcs", "Assorted taiyaki.", 139, "taiyaki", 15),
             ("m15", "Tonkatsu", "Japanese breaded pork cutlet.", 149, "tonkatsu", 18),
+            ("d1", "Ice Coffee 16oz", "Iced coffee.", 60, "drinks", 50),
+            ("d2", "Ice Spanish Latte 16oz", "Iced Spanish latte.", 70, "drinks", 50),
+            ("d3", "Coffee Float 16oz", "Coffee float.", 80, "drinks", 50),
+            ("d4", "Coke Float 16oz", "Coke float.", 50, "drinks", 50),
+            ("d5", "Ice Choco 16oz", "Iced chocolate.", 60, "drinks", 50),
+            ("d6", "Choco Float 16oz", "Chocolate float.", 80, "drinks", 50),
         ]
         for code, name, description, price, category, stock in menu:
             MenuItem.objects.update_or_create(
