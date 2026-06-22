@@ -20,6 +20,16 @@ import { useOrders, type Order } from "../store";
 
 const PESO = "\u20b1";
 const CHANNEL_COLORS = ["#f97316", "#fb923c", "#fdba74"];
+const chartTooltipStyle = {
+  background: "#0a0a0a",
+  border: "1px solid #525252",
+  borderRadius: 8,
+  boxShadow: "0 16px 40px rgba(0, 0, 0, 0.45)",
+  color: "#f5f5f5",
+  fontSize: 12,
+};
+const chartTooltipLabelStyle = { color: "#f5f5f5", fontWeight: 600 };
+const chartTooltipItemStyle = { color: "#fb923c" };
 
 type RangeKey = "hourly" | "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 
@@ -424,8 +434,9 @@ export function Reports() {
                 <YAxis stroke="#737373" fontSize={11} />
                 <Tooltip
                   formatter={(value, name) => [name === "sales" ? formatMoney(Number(value)) : value, name]}
-                  contentStyle={{ background: "#171717", border: "1px solid #404040", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "#e5e5e5" }}
+                  contentStyle={chartTooltipStyle}
+                  labelStyle={chartTooltipLabelStyle}
+                  itemStyle={chartTooltipItemStyle}
                 />
                 <Line type="monotone" dataKey="sales" stroke="#f97316" strokeWidth={2.5} dot={{ fill: "#f97316", r: 3 }} />
               </LineChart>
@@ -445,7 +456,9 @@ export function Reports() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "#171717", border: "1px solid #404040", borderRadius: 8, fontSize: 12 }}
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={chartTooltipLabelStyle}
+                    itemStyle={chartTooltipItemStyle}
                   />
                   <Legend wrapperStyle={{ fontSize: 11, color: "#a3a3a3" }} />
                 </PieChart>
@@ -475,7 +488,9 @@ export function Reports() {
                   <YAxis type="category" dataKey="name" stroke="#a3a3a3" fontSize={11} width={140} />
                   <Tooltip
                     formatter={(value) => [`${Number(value)} units`, "Sold"]}
-                    contentStyle={{ background: "#171717", border: "1px solid #404040", borderRadius: 8, fontSize: 12 }}
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={chartTooltipLabelStyle}
+                    itemStyle={chartTooltipItemStyle}
                   />
                   <Bar dataKey="sold" fill="#f97316" radius={[0, 6, 6, 0]}>
                     <LabelList dataKey="sold" position="right" fill="#e5e5e5" fontSize={11} formatter={(value: number) => `${value}`} />
