@@ -46,6 +46,7 @@ type MenuItem = {
   category: string;
   image: string;
   stock: number;
+  variants?: { id: string; label: string; price: number }[];
 };
 
 const categories: Category[] = [
@@ -80,6 +81,78 @@ const menu: MenuItem[] = [
   { id: "m14", name: "Taiyaki Mix 6pcs",         desc: "Assorted taiyaki with mixed fillings — best seller!",         price: 139, category: "taiyaki",     image: "https://images.unsplash.com/photo-1766375887711-1217eddb3b46?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", stock: 15 },
   // Tonkatsu
   { id: "m15", name: "Tonkatsu",                 desc: "Japanese breaded deep-fried pork cutlet, served with sauce.", price: 149, category: "tonkatsu",    image: "https://images.unsplash.com/photo-1496112774951-bf41010eed5e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", stock: 18 },
+];
+
+const takoyakiMenu: MenuItem[] = [
+  {
+    id: "tk-octobits",
+    name: "Takoyaki (Octobits)",
+    desc: "Octobits filling. Choose 6pcs, 12pcs, or 16pcs.",
+    price: 109,
+    category: "takoyaki",
+    image: "https://images.unsplash.com/photo-1574236079563-bf177d2ccea7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    stock: 30,
+    variants: [
+      { id: "6", label: "6pcs", price: 109 },
+      { id: "12", label: "12pcs", price: 179 },
+      { id: "16", label: "16pcs", price: 219 },
+    ],
+  },
+  {
+    id: "tk-ebi",
+    name: "Ebiyaki (Shrimp)",
+    desc: "Shrimp filling. Choose 6pcs, 12pcs, or 16pcs.",
+    price: 109,
+    category: "takoyaki",
+    image: "https://images.unsplash.com/photo-1771308458012-e60e667bbddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    stock: 25,
+    variants: [
+      { id: "6", label: "6pcs", price: 109 },
+      { id: "12", label: "12pcs", price: 179 },
+      { id: "16", label: "16pcs", price: 219 },
+    ],
+  },
+  {
+    id: "tk-chizu",
+    name: "Chizuyaki (Cheese)",
+    desc: "Cheese filling. Choose 6pcs, 12pcs, or 16pcs.",
+    price: 99,
+    category: "takoyaki",
+    image: "https://images.unsplash.com/photo-1574236079563-bf177d2ccea7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    stock: 20,
+    variants: [
+      { id: "6", label: "6pcs", price: 99 },
+      { id: "12", label: "12pcs", price: 159 },
+      { id: "16", label: "16pcs", price: 199 },
+    ],
+  },
+  {
+    id: "tk-yasai",
+    name: "Yasaiyaki (Veggies)",
+    desc: "Vegetable filling. Choose 6pcs, 12pcs, or 16pcs.",
+    price: 89,
+    category: "takoyaki",
+    image: "https://images.unsplash.com/photo-1574236079563-bf177d2ccea7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    stock: 20,
+    variants: [
+      { id: "6", label: "6pcs", price: 89 },
+      { id: "12", label: "12pcs", price: 129 },
+      { id: "16", label: "16pcs", price: 169 },
+    ],
+  },
+  {
+    id: "tk-half",
+    name: "Half-half",
+    desc: "Any 2 flavors. Choose 12pcs or 16pcs.",
+    price: 199,
+    category: "takoyaki",
+    image: "https://images.unsplash.com/photo-1764520406362-b1673b2213bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    stock: 20,
+    variants: [
+      { id: "12", label: "12pcs", price: 199 },
+      { id: "16", label: "16pcs", price: 229 },
+    ],
+  },
 ];
 
 type NavId = "pos" | "orders" | "kitchen" | "inventory" | "reports" | "users" | "settings";
@@ -564,7 +637,8 @@ function POS({ cashier }: { cashier: string }) {
     (a) => search === "" || a.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filtered = menu.filter(
+  const visibleMenu = activeCategory === "takoyaki" ? takoyakiMenu : menu;
+  const filtered = visibleMenu.filter(
     (m) =>
       m.category === activeCategory &&
       (search === "" || m.name.toLowerCase().includes(search.toLowerCase())),
@@ -718,7 +792,9 @@ function POS({ cashier }: { cashier: string }) {
                   </div>
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-red-500">₱{item.price.toFixed(2)}</span>
+                      <span className="text-red-500">
+                        {item.variants ? "From " : ""}₱{item.price.toFixed(2)}
+                      </span>
                       {item.oldPrice && (
                         <span className="text-xs text-neutral-600 line-through">
                           ₱{item.oldPrice.toFixed(2)}
@@ -752,7 +828,7 @@ function POS({ cashier }: { cashier: string }) {
                     : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
-                {t === "dinein" ? "Dine in" : "Take"}
+                {t === "dinein" ? "Dine in" : "Take out"}
               </button>
             ))}
           </div>
@@ -945,6 +1021,9 @@ function AddOnPicker({
 }) {
   // qty map: addOn id → quantity (0 = not selected)
   const [qtys, setQtys] = useState<Record<string, number>>({});
+  const [selectedVariantId, setSelectedVariantId] = useState(item.variants?.[0]?.id ?? "");
+  const selectedVariant = item.variants?.find((variant) => variant.id === selectedVariantId);
+  const basePrice = selectedVariant?.price ?? item.price;
   const availableAddOns = addOnsForItem(item);
 
   const setQty = (id: string, val: number) =>
@@ -970,12 +1049,36 @@ function AddOnPicker({
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-neutral-100">{item.name}</div>
-            <div className="text-xs text-neutral-500 mt-0.5">₱{item.price.toFixed(2)} base price</div>
+            <div className="text-xs text-neutral-500 mt-0.5">₱{basePrice.toFixed(2)} base price</div>
           </div>
         </div>
 
         {/* Add-ons list */}
         <div className="p-5 space-y-2 max-h-72 overflow-y-auto">
+          {item.variants && (
+            <div className="mb-4">
+              <div className="text-xs text-neutral-500 uppercase tracking-widest mb-3">Choose Size</div>
+              <div className="grid grid-cols-3 gap-2">
+                {item.variants.map((variant) => {
+                  const active = selectedVariantId === variant.id;
+                  return (
+                    <button
+                      key={variant.id}
+                      onClick={() => setSelectedVariantId(variant.id)}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${
+                        active
+                          ? "border-red-500 bg-red-600/15 text-neutral-100"
+                          : "border-neutral-700 bg-neutral-800/50 text-neutral-400 hover:text-neutral-100"
+                      }`}
+                    >
+                      <div className="text-sm">{variant.label}</div>
+                      <div className="text-[11px] text-red-400">₱{variant.price}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="text-xs text-neutral-500 uppercase tracking-widest mb-3">Choose Add-ons</div>
           {availableAddOns.length === 0 && (
             <div className="text-sm text-neutral-500 text-center py-8">
@@ -1036,7 +1139,7 @@ function AddOnPicker({
         <div className="px-5 pb-5 pt-3 border-t border-neutral-800 flex items-center gap-3">
           <div className="flex-1 text-sm text-neutral-400">
             Total:{" "}
-            <span className="text-neutral-100">₱{(item.price + extraTotal).toFixed(2)}</span>
+            <span className="text-neutral-100">₱{(basePrice + extraTotal).toFixed(2)}</span>
             {extraTotal > 0 && (
               <span className="text-xs text-red-400 ml-1">+₱{extraTotal} extras</span>
             )}
@@ -1048,7 +1151,19 @@ function AddOnPicker({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(item, flatSelected)}
+            onClick={() =>
+              onConfirm(
+                selectedVariant
+                  ? {
+                      ...item,
+                      id: `${item.id}-${selectedVariant.id}`,
+                      name: `${item.name} ${selectedVariant.label}`,
+                      price: selectedVariant.price,
+                    }
+                  : item,
+                flatSelected,
+              )
+            }
             className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm transition"
           >
             Add to Cart
