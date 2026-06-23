@@ -164,6 +164,19 @@ class InventoryItem(TimestampedModel):
         return self
 
 
+class RecipeIngredient(TimestampedModel):
+    menu_item = models.ForeignKey(MenuItem, related_name="recipe_lines", on_delete=models.CASCADE)
+    inventory_item = models.ForeignKey(InventoryItem, related_name="recipe_lines", on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        unique_together = ("menu_item", "inventory_item")
+        ordering = ["menu_item__name", "inventory_item__name"]
+
+    def __str__(self):
+        return f"{self.menu_item.name}: {self.quantity} {self.inventory_item.unit} {self.inventory_item.name}"
+
+
 class AppSetting(TimestampedModel):
     key = models.CharField(max_length=80, unique=True)
     value = models.JSONField(default=dict)

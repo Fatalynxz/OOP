@@ -2,7 +2,8 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 
-from restaurant.models import AddOn, InventoryItem, MenuCategory, MenuItem, StaffUser
+from restaurant.bom_seed import seed_bom
+from restaurant.models import AddOn, InventoryItem, MenuCategory, MenuItem, RecipeIngredient, StaffUser
 
 
 class Command(BaseCommand):
@@ -60,6 +61,8 @@ class Command(BaseCommand):
             ("m9", "Okonomiyaki", "Japanese savory pancake.", 119, "okonomiyaki", 15),
             ("m10", "Yakisoba", "Japanese stir-fried noodles.", 119, "noodles", 18),
             ("m11", "Taiyaki Cheese 6pcs", "Fish-shaped cake with cheese filling.", 119, "taiyaki", 24),
+            ("m12", "Taiyaki Ube 6pcs", "Fish-shaped cake with ube filling.", 129, "taiyaki", 20),
+            ("m13", "Taiyaki Red Beans 6pcs", "Fish-shaped cake with red bean filling.", 129, "taiyaki", 20),
             ("m14", "Taiyaki Mix 6pcs", "Assorted taiyaki.", 139, "taiyaki", 15),
             ("m15", "Tonkatsu", "Japanese breaded pork cutlet.", 149, "tonkatsu", 18),
             ("d1", "Ice Coffee 16oz", "Iced coffee.", 60, "drinks", 50),
@@ -106,5 +109,7 @@ class Command(BaseCommand):
                 sku=sku,
                 defaults={"name": name, "category": category, "unit": unit, "stock": stock, "reorder": reorder, "cost": Decimal(cost), "supplier": supplier},
             )
+
+        seed_bom(InventoryItem, MenuItem, RecipeIngredient)
 
         self.stdout.write(self.style.SUCCESS("Demo data seeded."))

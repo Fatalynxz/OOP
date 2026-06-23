@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.utils import timezone
 
-from .models import AuditLog, InventoryItem, Order, OrderItem, OrderItemAddOn, StaffUser
+from .models import AuditLog, InventoryItem, MenuItem, Order, OrderItem, OrderItemAddOn, StaffUser
 from .repositories import InventoryRepository, OrderRepository, StaffRepository
 
 
@@ -42,8 +42,10 @@ class OrderService:
             total=Decimal(str(payload.get("total") or 0)),
         )
         for item_payload in payload.get("items", []):
+            menu_item = self._find_menu_item(item_payload.get("name", ""))
             item = OrderItem.objects.create(
                 order=order,
+                menu_item=menu_item,
                 name=item_payload.get("name", "Item"),
                 quantity=int(item_payload.get("qty") or 1),
                 unit_price=Decimal(str(item_payload.get("price") or 0)),
@@ -55,6 +57,8 @@ class OrderService:
                     name=add_on.get("name", "Add-on"),
                     price=Decimal(str(add_on.get("price") or 0)),
                 )
+            if menu_item:
+                self._deduct_recipe(item, menu_item)
         order = self.repo.get_by_no(order.order_no)
         actor = payload.get("actorName") or order.cashier or "Cashier"
         AuditService.record(
@@ -67,6 +71,45 @@ class OrderService:
             metadata={"total": float(order.total), "items": len(payload.get("items", []))},
         )
         return order
+
+    def _find_menu_item(self, name):
+        clean_name = (name or "").strip()
+        if not clean_name:
+            return None
+        exact = MenuItem.objects.filter(name__iexact=clean_name).first()
+        if exact:
+            return exact
+        drink_match = MenuItem.objects.filter(name__iexact=f"{clean_name} 16oz").first()
+        if drink_match:
+            return drink_match
+        return MenuItem.objects.filter(name__icontains=clean_name).first()
+
+    def _deduct_recipe(self, order_item, menu_item):
+        deductions = []
+        for line in menu_item.recipe_lines.select_related("inventory_item").all():
+            amount = line.quantity * order_item.quantity
+            ingredient = line.inventory_item
+            before = ingredient.stock
+            ingredient.adjust(-amount)
+            deductions.append(
+                {
+                    "ingredient": ingredient.name,
+                    "used": amount,
+                    "unit": ingredient.unit,
+                    "before": before,
+                    "after": ingredient.stock,
+                }
+            )
+        if deductions:
+            AuditService.record(
+                actor_name=order_item.order.cashier or "Cashier",
+                actor_role="cashier",
+                action="inventory.deducted",
+                summary=f"Inventory deducted for {order_item.order.order_no} - {order_item.name}",
+                object_type="order",
+                object_id=order_item.order.order_no,
+                metadata={"item": order_item.name, "quantity": order_item.quantity, "deductions": deductions},
+            )
 
     def advance(self, order_no, actor_name="Kitchen Staff", actor_role="kitchen"):
         order = self.repo.get_by_no(order_no)
