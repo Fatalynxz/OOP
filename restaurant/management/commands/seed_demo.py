@@ -90,9 +90,14 @@ class Command(BaseCommand):
             ("ao1", "Extra Mayo", 10),
             ("ao2", "Extra Takoyaki Sauce", 10),
             ("ao3", "Extra Bonito Flakes", 15),
+            ("ao4", "Extra Aonori", 10),
+            ("ao5", "Extra Gyoza Sauce", 10),
             ("ao6", "Extra Chili Oil", 10),
+            ("ao7", "Extra Tonkatsu Sauce", 10),
             ("ao8", "Extra Okonomiyaki Sauce", 10),
             ("ao9", "Extra Rice", 20),
+            ("ao10", "Extra Egg", 15),
+            ("ao11", "Extra Cabbage", 15),
             ("ao12", "Spicy", 0),
         ]:
             AddOn.objects.update_or_create(code=code, defaults={"name": name, "price": Decimal(price), "active": True})

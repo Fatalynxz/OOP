@@ -46,6 +46,12 @@ INGREDIENTS = [
     ("ING-142", "Coke", "Beverages", "ml", 12000, 2000, "0.08", "Beverage Supplier"),
     ("ING-143", "Ice Cream", "Dairy", "g", 8000, 1200, "0.22", "Dairy Supplier"),
     ("ING-144", "Ice", "Beverages", "pc", 1500, 250, "0.50", "Store Supply"),
+    ("ING-145", "Mayo", "Sauces", "ml", 8000, 1200, "0.22", "Grocery Supplier"),
+    ("ING-146", "Gyoza Sauce", "Sauces", "ml", 8000, 1200, "0.28", "Japanese Supplier"),
+    ("ING-147", "Chili Oil", "Sauces", "ml", 5000, 700, "0.35", "Japanese Supplier"),
+    ("ING-148", "Okonomiyaki Sauce", "Sauces", "ml", 8000, 1200, "0.32", "Japanese Supplier"),
+    ("ING-149", "Rice", "Grains", "g", 50000, 8000, "0.06", "Local Market"),
+    ("ING-150", "Spicy Powder", "Dry Goods", "g", 3000, 400, "0.20", "Japanese Supplier"),
 ]
 
 TAKO_BASE = {
@@ -156,6 +162,21 @@ RECIPES = {
     "Coke Float 16oz": {"Coke": 250, "Ice Cream": 80, "Ice": 1},
     "Ice Choco 16oz": {"Chocolate": 35, "Milk": 180, "Sugar": 10, "Ice": 1},
     "Choco Float 16oz": {"Chocolate": 35, "Milk": 150, "Sugar": 10, "Ice Cream": 80, "Ice": 1},
+}
+
+ADD_ON_RECIPES = {
+    "Extra Mayo": {"Mayo": 20},
+    "Extra Takoyaki Sauce": {"Takoyaki Sauce": 20},
+    "Extra Bonito Flakes": {"Katsubushi": 5},
+    "Extra Aonori": {"Aonori": 2},
+    "Extra Gyoza Sauce": {"Gyoza Sauce": 20},
+    "Extra Chili Oil": {"Chili Oil": 15},
+    "Extra Tonkatsu Sauce": {"Tonkatsu Sauce": 20},
+    "Extra Okonomiyaki Sauce": {"Okonomiyaki Sauce": 20},
+    "Extra Rice": {"Rice": 150},
+    "Extra Egg": {"Egg": 1},
+    "Extra Cabbage": {"Cabbage": 60},
+    "Spicy": {"Spicy Powder": 3},
 }
 
 

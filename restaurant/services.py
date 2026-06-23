@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.utils import timezone
 
+from .bom_seed import ADD_ON_RECIPES
 from .models import AuditLog, InventoryItem, MenuItem, Order, OrderItem, OrderItemAddOn, StaffUser
 from .repositories import InventoryRepository, OrderRepository, StaffRepository
 
@@ -57,8 +58,11 @@ class OrderService:
                     name=add_on.get("name", "Add-on"),
                     price=Decimal(str(add_on.get("price") or 0)),
                 )
+                self._deduct_add_on(item, add_on.get("name", "Add-on"))
             if menu_item:
                 self._deduct_recipe(item, menu_item)
+            elif item.name in ADD_ON_RECIPES:
+                self._deduct_add_on(item, item.name, quantity_multiplier=item.quantity)
         order = self.repo.get_by_no(order.order_no)
         actor = payload.get("actorName") or order.cashier or "Cashier"
         AuditService.record(
@@ -110,6 +114,43 @@ class OrderService:
                 object_id=order_item.order.order_no,
                 metadata={"item": order_item.name, "quantity": order_item.quantity, "deductions": deductions},
             )
+
+    def _deduct_add_on(self, order_item, add_on_name, quantity_multiplier=None):
+        recipe = ADD_ON_RECIPES.get(add_on_name)
+        if not recipe:
+            return
+        multiplier = quantity_multiplier if quantity_multiplier is not None else order_item.quantity
+        deductions = self._deduct_inventory_lines(recipe, multiplier)
+        if deductions:
+            AuditService.record(
+                actor_name=order_item.order.cashier or "Cashier",
+                actor_role="cashier",
+                action="inventory.deducted",
+                summary=f"Inventory deducted for {order_item.order.order_no} - {add_on_name}",
+                object_type="order",
+                object_id=order_item.order.order_no,
+                metadata={"item": order_item.name, "addOn": add_on_name, "quantity": multiplier, "deductions": deductions},
+            )
+
+    def _deduct_inventory_lines(self, recipe, multiplier=1):
+        deductions = []
+        for ingredient_name, quantity in recipe.items():
+            ingredient = InventoryItem.objects.filter(name=ingredient_name).first()
+            if not ingredient:
+                continue
+            amount = quantity * multiplier
+            before = ingredient.stock
+            ingredient.adjust(-amount)
+            deductions.append(
+                {
+                    "ingredient": ingredient.name,
+                    "used": amount,
+                    "unit": ingredient.unit,
+                    "before": before,
+                    "after": ingredient.stock,
+                }
+            )
+        return deductions
 
     def advance(self, order_no, actor_name="Kitchen Staff", actor_role="kitchen"):
         order = self.repo.get_by_no(order_no)
