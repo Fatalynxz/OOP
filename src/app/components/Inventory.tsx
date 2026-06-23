@@ -143,7 +143,6 @@ export function Inventory() {
                 <Th>Stock</Th>
                 <Th>Reorder Pt.</Th>
                 <Th>Status</Th>
-                <Th>Supplier</Th>
                 <Th>Updated</Th>
                 <Th className="text-right">Adjust</Th>
               </tr>
@@ -181,7 +180,6 @@ export function Inventory() {
                         <Pill color="bg-green-500/15 text-green-400">OK</Pill>
                       )}
                     </Td>
-                    <Td className="text-neutral-400">{i.supplier}</Td>
                     <Td className="text-neutral-500 text-xs">{i.updated}</Td>
                     <Td>
                       <div className="flex items-center justify-end gap-1.5">
@@ -198,7 +196,7 @@ export function Inventory() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center text-neutral-500 py-12 text-sm">
+                  <td colSpan={8} className="text-center text-neutral-500 py-12 text-sm">
                     No items match.
                   </td>
                 </tr>
