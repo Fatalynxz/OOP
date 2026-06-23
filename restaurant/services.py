@@ -12,6 +12,7 @@ from .repositories import InventoryRepository, OrderRepository, StaffRepository
 
 
 class AuthService:
+    # ABSTRACTION: the login process is exposed as one simple method.
     def __init__(self, staff_repo=None):
         self.staff_repo = staff_repo or StaffRepository()
 
@@ -23,6 +24,7 @@ class AuthService:
 
 
 class OrderService:
+    # ENCAPSULATION: all order workflow rules are kept inside this service class.
     ACTIVE_FLOW = ["pending", "accepted", "preparing", "serving", "completed"]
 
     def __init__(self, repo=None):
@@ -30,6 +32,8 @@ class OrderService:
 
     @transaction.atomic
     def create(self, payload):
+        # ABSTRACTION: checkout calls create(), while this method handles order saving,
+        # recipe/BOM deduction, add-on deduction, and audit logging internally.
         order_type = payload.get("type") or "Take"
         if order_type != "Dine in":
             order_type = "Take"
@@ -77,6 +81,7 @@ class OrderService:
         return order
 
     def _find_menu_item(self, name):
+        # ENCAPSULATION: menu matching fallback rules are hidden from the views/frontend.
         clean_name = (name or "").strip()
         if not clean_name:
             return None
@@ -89,6 +94,7 @@ class OrderService:
         return MenuItem.objects.filter(name__icontains=clean_name).first()
 
     def _deduct_recipe(self, order_item, menu_item):
+        # ABSTRACTION: recipe deduction is handled by BOM lines, not hard-coded checkout math.
         deductions = []
         for line in menu_item.recipe_lines.select_related("inventory_item").all():
             amount = line.quantity * order_item.quantity
@@ -116,6 +122,7 @@ class OrderService:
             )
 
     def _deduct_add_on(self, order_item, add_on_name, quantity_multiplier=None):
+        # ENCAPSULATION: add-on ingredient deduction stays in one private helper.
         recipe = ADD_ON_RECIPES.get(add_on_name)
         if not recipe:
             return
@@ -133,6 +140,8 @@ class OrderService:
             )
 
     def _deduct_inventory_lines(self, recipe, multiplier=1):
+        # POLYMORPHISM: the same deduction loop works for any recipe dictionary
+        # whether it came from a menu item, drink, or add-on.
         deductions = []
         for ingredient_name, quantity in recipe.items():
             ingredient = InventoryItem.objects.filter(name=ingredient_name).first()
@@ -153,6 +162,7 @@ class OrderService:
         return deductions
 
     def advance(self, order_no, actor_name="Kitchen Staff", actor_role="kitchen"):
+        # ABSTRACTION: kitchen only asks to advance an order; status-flow details stay here.
         order = self.repo.get_by_no(order_no)
         previous_status = order.status
         if order.status in self.ACTIVE_FLOW:
@@ -207,6 +217,7 @@ class OrderService:
 
 
 class InventoryService:
+    # ABSTRACTION: inventory actions are offered through simple service methods.
     def __init__(self, repo=None):
         self.repo = repo or InventoryRepository()
 
@@ -227,6 +238,7 @@ class InventoryService:
 
 
 class StaffService:
+    # ENCAPSULATION: staff creation/status rules and audit logging stay in this class.
     def create(self, payload, actor_name="Admin", actor_role="admin"):
         name = payload["name"].strip()
         email = (payload.get("email") or "").strip()
@@ -277,6 +289,7 @@ class StaffService:
 
 
 class AuditService:
+    # ABSTRACTION: other classes record activity through record() without knowing DB details.
     @staticmethod
     def record(actor_name, actor_role, action, summary, object_type="", object_id="", metadata=None):
         return AuditLog.objects.create(
@@ -294,6 +307,7 @@ class AuditService:
 
 
 class ReportService:
+    # ABSTRACTION: report calculations are hidden behind report service methods.
     def today(self):
         start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
         orders = Order.objects.filter(created_at__gte=start).exclude(status="voided")

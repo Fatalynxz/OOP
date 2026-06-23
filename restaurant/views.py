@@ -13,6 +13,7 @@ from .services import AuditService, AuthService, InventoryService, OrderService,
 
 @method_decorator(csrf_exempt, name="dispatch")
 class JsonView(View):
+    # INHERITANCE: API views inherit payload(), ok(), and error() from this base view.
     def payload(self):
         if not self.request.body:
             return {}
@@ -26,6 +27,7 @@ class JsonView(View):
 
 
 class AuthLoginView(JsonView):
+    # INHERITANCE: this view reuses JsonView's JSON helper methods.
     def post(self, request):
         self.request = request
         payload = self.payload()
@@ -59,6 +61,8 @@ class OrderListView(JsonView):
 
 
 class OrderActionView(JsonView):
+    # POLYMORPHISM: each action key points to a different service method,
+    # but the post() method calls them through the same interface.
     actions = {
         "advance": lambda service, order_no, payload: service.advance(
             order_no,

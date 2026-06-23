@@ -5,6 +5,7 @@ from django.utils import timezone
 
 
 class TimestampedModel(models.Model):
+    # INHERITANCE: child models inherit these common timestamp fields.
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -13,6 +14,7 @@ class TimestampedModel(models.Model):
 
 
 class StaffUser(TimestampedModel):
+    # ENCAPSULATION: staff account data and staff-related behavior stay in one model class.
     ROLE_CHOICES = [
         ("admin", "Admin"),
         ("manager", "Manager"),
@@ -36,6 +38,7 @@ class StaffUser(TimestampedModel):
     last_login_label = models.CharField(max_length=40, default="Never")
 
     def cycle_status(self):
+        # ENCAPSULATION: this method protects the status-change rule inside StaffUser.
         order = ["active", "off", "suspended"]
         self.status = order[(order.index(self.status) + 1) % len(order)]
         self.save(update_fields=["status", "updated_at"])
@@ -58,6 +61,7 @@ class MenuCategory(TimestampedModel):
 
 
 class MenuItem(TimestampedModel):
+    # INHERITANCE: MenuItem reuses created_at and updated_at from TimestampedModel.
     category = models.ForeignKey(MenuCategory, related_name="items", on_delete=models.PROTECT)
     code = models.CharField(max_length=40, unique=True)
     name = models.CharField(max_length=140)
@@ -85,6 +89,7 @@ class AddOn(TimestampedModel):
 
 
 class Order(TimestampedModel):
+    # ENCAPSULATION: all order fields and order helper behavior are grouped here.
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("accepted", "Accepted"),
@@ -121,6 +126,7 @@ class Order(TimestampedModel):
 
     @property
     def placed_at_label(self):
+        # ABSTRACTION: callers ask for placed_at_label without knowing date formatting logic.
         return timezone.localtime(self.created_at).strftime("%H:%M")
 
     def __str__(self):
@@ -136,6 +142,7 @@ class OrderItem(TimestampedModel):
     note = models.TextField(blank=True)
 
     def line_total(self):
+        # ABSTRACTION: the calculation is hidden behind a simple method name.
         return self.quantity * self.unit_price
 
 
@@ -146,6 +153,7 @@ class OrderItemAddOn(TimestampedModel):
 
 
 class InventoryItem(TimestampedModel):
+    # ENCAPSULATION: inventory stock rules are kept with the inventory item data.
     sku = models.CharField(max_length=40, unique=True)
     name = models.CharField(max_length=140)
     category = models.CharField(max_length=80)
@@ -159,12 +167,14 @@ class InventoryItem(TimestampedModel):
         ordering = ["sku"]
 
     def adjust(self, delta):
+        # ENCAPSULATION: stock cannot go below zero because this method controls adjustment.
         self.stock = max(0, self.stock + delta)
         self.save(update_fields=["stock", "updated_at"])
         return self
 
 
 class RecipeIngredient(TimestampedModel):
+    # ABSTRACTION: represents a recipe/BOM line instead of hard-coding ingredients in checkout.
     menu_item = models.ForeignKey(MenuItem, related_name="recipe_lines", on_delete=models.CASCADE)
     inventory_item = models.ForeignKey(InventoryItem, related_name="recipe_lines", on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(default=1)
@@ -186,6 +196,7 @@ class AppSetting(TimestampedModel):
 
 
 class AuditLog(TimestampedModel):
+    # ENCAPSULATION: audit trail data is stored in one dedicated model.
     actor_name = models.CharField(max_length=120)
     actor_role = models.CharField(max_length=40, blank=True)
     action = models.CharField(max_length=80)

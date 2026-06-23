@@ -10,6 +10,7 @@ def order_type_label(value):
 
 
 class StaffSerializer:
+    # POLYMORPHISM: every serializer exposes one(), but each class formats different data.
     @staticmethod
     def one(staff):
         role = "admin" if staff.role == "manager" else staff.role
@@ -30,6 +31,7 @@ class StaffSerializer:
 
 
 class MenuSerializer:
+    # ABSTRACTION: converts database Menu objects into frontend-friendly dictionaries.
     @staticmethod
     def category(category):
         return {"id": category.slug, "name": category.name}
@@ -52,6 +54,7 @@ class MenuSerializer:
 
 
 class OrderSerializer:
+    # POLYMORPHISM: this serializer also uses one(), but returns an order-shaped response.
     @staticmethod
     def item(item):
         return {
@@ -83,6 +86,7 @@ class OrderSerializer:
 
 
 class InventorySerializer:
+    # POLYMORPHISM: same one() method name, different inventory-specific output.
     @staticmethod
     def one(item):
         return {
@@ -101,6 +105,7 @@ class InventorySerializer:
 
 
 class AuditLogSerializer:
+    # POLYMORPHISM: same serializer pattern, but for audit log records.
     @staticmethod
     def one(log):
         return {
