@@ -23,7 +23,6 @@ const seed: Item[] = [
   { id: "i4", sku: "ING-004", name: "Egg Noodles", category: "Grains", unit: "pack", stock: 4, reorder: 15, cost: 48, supplier: "Lucky Me", updated: "2d ago" },
   { id: "i5", sku: "ING-005", name: "Soy Sauce", category: "Condiments", unit: "L", stock: 9, reorder: 5, cost: 95, supplier: "Silver Swan", updated: "Today, 07:55" },
   { id: "i6", sku: "ING-006", name: "Tamarind Mix", category: "Condiments", unit: "pack", stock: 2, reorder: 8, cost: 24, supplier: "Knorr", updated: "3d ago" },
-  { id: "i7", sku: "ING-007", name: "Kangkong", category: "Vegetables", unit: "bundle", stock: 0, reorder: 10, cost: 15, supplier: "Local Market", updated: "Today, 06:30" },
   { id: "i8", sku: "ING-008", name: "Iced Tea Powder", category: "Beverages", unit: "pack", stock: 12, reorder: 6, cost: 75, supplier: "Nestea", updated: "Today, 09:00" },
 ];
 
@@ -90,7 +89,7 @@ export function Inventory() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
       <div className="px-6 py-4 border-b border-neutral-800">
         <h2 className="text-neutral-100">Inventory</h2>
         <div className="text-xs text-neutral-500">
@@ -133,7 +132,7 @@ export function Inventory() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-6 pr-3 inventory-scroll">
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-neutral-800/60 text-neutral-400 text-xs uppercase">

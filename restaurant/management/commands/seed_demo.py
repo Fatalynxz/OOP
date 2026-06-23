@@ -108,7 +108,6 @@ class Command(BaseCommand):
             ("ING-003", "Jasmine Rice", "Grains", "kg", 42, 25, 65, "Sunrise"),
             ("ING-004", "Egg Noodles", "Grains", "pack", 4, 15, 48, "Lucky Me"),
             ("ING-005", "Soy Sauce", "Condiments", "L", 9, 5, 95, "Silver Swan"),
-            ("ING-007", "Kangkong", "Vegetables", "bundle", 0, 10, 15, "Local Market"),
         ]:
             InventoryItem.objects.update_or_create(
                 sku=sku,
